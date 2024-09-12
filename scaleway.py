@@ -121,18 +121,17 @@ def wait_for_ready(id):
 
 def wait_for_ip(id):
     print("Waiting for ip...")
-    start = time.time()
     ip = None
     while not ip:
         state = get_instance(id)['server']['public_ip']        
         if state:
             ip = state['address']
-        time.sleep(0.1)
+        time.sleep(0.3)
     print(f"Found IP: {ip}")
     return ip
 
 def new_instance(name):
-    new_id = create_instance("test1")
+    new_id = create_instance(name)
     start_instance(new_id)
     wait_for_ready(new_id)
     ip = wait_for_ip(new_id)
