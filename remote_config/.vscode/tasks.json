@@ -1,0 +1,22 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Open Terminal on Startup",
+            "type": "shell",
+            "command": "python3 main.py",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",  // Ensure the terminal opens visibly
+                "panel": "shared"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"  // Automatically run the task when workspace is opened
+            }
+        }
+    ]
+}

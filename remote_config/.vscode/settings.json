@@ -1,0 +1,17 @@
+{
+    // Sets the default terminal to Zsh
+    "terminal.integrated.defaultProfile.linux": "zsh",
+
+    // Enable dark mode theme
+    "workbench.colorTheme": "Default Dark+",
+    "workbench.startupEditor": "readme",
+    "editor.fontSize": 14,
+
+    // Optional: Enable Zsh shell for the terminal profile
+    "terminal.integrated.profiles.linux": {
+        "zsh": {
+            "path": "/bin/zsh",
+            "args": []
+        }
+    },
+}
