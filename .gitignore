@@ -2,3 +2,4 @@
 __pycache__/
 ssh_testing.py
 remote_config/caddyfile
+/venv/*
