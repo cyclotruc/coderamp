@@ -1,50 +1,49 @@
-from fabric import Connection
+import asyncio
+import asyncssh
 import time
+import sys
 
-def remote_ssh(ip, command):
-    c = Connection(host=ip, user='root')
-    c.run(command)
+async def remote_ssh(ip, command):
+    async with asyncssh.connect(ip, username='root', known_hosts=None) as conn:
+        process = await conn.create_process(command)
+        async for line in process.stdout:
+            print(line, end='')
+        async for line in process.stderr:
+            print(line, end='', file=sys.stderr)
+        return await process.wait()
 
+async def copy_file(ip, local_path, remote_path):
+    async with asyncssh.connect(ip, username='root',known_hosts=None) as conn:
+        await asyncssh.scp(local_path, (conn, remote_path))
 
-def copy_file(ip, local_path, remote_path):
-    c = Connection(host=ip, user='root')
-    c.put(local_path, remote_path)
+async def setup_os(ip):
+    await remote_ssh(ip, "apt-get install -y zsh")
+    await remote_ssh(ip, "mkdir /coderamp")
+    await remote_ssh(ip, 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"')
 
+async def setup_code_server(ip):
+    await remote_ssh(ip, "curl -fsSL https://code-server.dev/install.sh | sh")
+    await copy_file(ip, "./remote_config/code-server@.service", "/lib/systemd/system/code-server@.service")
+    await remote_ssh(ip, "sudo systemctl enable --now code-server@root")
 
-def setup_os(ip):
-    remote_ssh(ip, "apt-get install -y zsh")
-    remote_ssh(ip, "mkdir /coderamp")
-    remote_ssh(ip, 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"')
+async def setup_vscode(ip):
+    await remote_ssh(ip, "mkdir /coderamp/.vscode")
+    await copy_file(ip, "./remote_config/.vscode/settings.json", "/coderamp/.vscode/settings.json")
+    await copy_file(ip, "./remote_config/.vscode/tasks.json", "/coderamp/.vscode/tasks.json")
 
-
-def setup_code_server(ip):
-    remote_ssh(ip, "curl -fsSL https://code-server.dev/install.sh | sh")
-    copy_file(ip, "./remote_config/code-server@.service", "/lib/systemd/system/code-server@.service")
-    remote_ssh(ip, "sudo systemctl enable --now code-server@root")
-    
-
-def setup_vscode(ip):
-    remote_ssh(ip, "mkdir /coderamp/.vscode")
-    copy_file(ip, "./remote_config/.vscode/settings.json", "/coderamp/.vscode/settings.json")
-    copy_file(ip, "./remote_config/.vscode/tasks.json", "/coderamp/.vscode/tasks.json")
-
-def wait_for_ssh(ip):
+async def wait_for_ssh(ip):
     print("Waiting for ssh...")
-    ready = False
-    while not ready:
+    while True:
         try:
-            c = Connection(host=ip, user='root')
-            c.run("ls")
-            ready = True
+            async with asyncssh.connect(ip, username='root',known_hosts=None):
+                print(f"SSH ready")
+                return
         except:
-            time.sleep(0.5)
-    print(f"SSH ready")
+            await asyncio.sleep(0.5)
 
-
-def setup_coderamp(ip):
-    wait_for_ssh(ip)
-    setup_os(ip)
-    setup_code_server(ip)
-    setup_vscode(ip)
-
-    copy_file(ip, "./remote_config/main.py", "/coderamp/main.py")
+async def setup_coderamp(ip):
+    await wait_for_ssh(ip)
+    await setup_os(ip)
+    await setup_code_server(ip)
+    await setup_vscode(ip)
+    await copy_file(ip, "./remote_config/main.py", "/coderamp/main.py")

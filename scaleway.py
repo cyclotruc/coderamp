@@ -1,6 +1,8 @@
 import os
 import time
 import requests
+import asyncio
+
 from dotenv import load_dotenv
 
 
@@ -109,30 +111,31 @@ def delete_all_codeboxes():
             terminate_instance(id)
 
 
-def wait_for_ready(id):
+
+async def wait_for_ready(id):
     print("Waiting for ready...")
     start = time.time()
     state = None
     while state != "running":
         state = get_instance(id)['server']['state']        
-        time.sleep(0.5)
+        await asyncio.sleep(0.5)
     print(f"Ready after {time.time() - start}")
     
 
-def wait_for_ip(id):
+async def wait_for_ip(id):
     print("Waiting for ip...")
     ip = None
     while not ip:
         state = get_instance(id)['server']['public_ip']        
         if state:
             ip = state['address']
-        time.sleep(0.3)
+        await asyncio.sleep(0.3)
     print(f"Found IP: {ip}")
     return ip
 
-def new_instance(name):
+async def provision_instance(name):
     new_id = create_instance(name)
     start_instance(new_id)
-    wait_for_ready(new_id)
-    ip = wait_for_ip(new_id)
+    await wait_for_ready(new_id)
+    ip = await wait_for_ip(new_id)
     return ip
