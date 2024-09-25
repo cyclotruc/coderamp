@@ -6,6 +6,7 @@ from peewee import *
 
 from scaleway import delete_all_codeboxes, provision_instance
 from install import setup_coderamp
+from caddy import add_redirect
 
 load_dotenv()
 PG_USER = os.getenv("PG_USER")
@@ -101,12 +102,18 @@ async def main():
     full_reset()
 
     # ramp1 = Coderamp.create(base_url="https://codesandboxbeta.cloud")
-    
-    # for i in range(100):
-    #     if i <= 3:
-    #         asyncio.create_task(ramp1.new_instance())
+    # asyncio.create_task(ramp1.new_instance())        
+    # await asyncio.sleep(0)
+
+    # for i in range(1000):
+    #     for ramp in Coderamp.select():
+    #         for instance in ramp.instances:
+    #             if instance.state == "ready":
+    #                 await add_redirect('51.159.179.237', '', instance.public_ip)
+    #                 print("https://codesandboxbeta.cloud/code/test/?folder=/root/codefast")
+    #                 return 
     #     await asyncio.sleep(1)
-    #     print("waiting", i)
+        
 
 
     print_everything()

@@ -18,9 +18,18 @@ async def remote_ssh(ip, command):
         await process.wait()
         return output
 
+async def copy_file(ip, local_path, remote_path):
+    async with asyncssh.connect(ip, username='root',known_hosts=None) as conn:
+        await asyncssh.scp(local_path, (conn, remote_path))
+
+
 async def get_config(ip):
     curl_command = f"curl 'http://localhost:2019/config/' -H 'Accept: application/json'"
     return await remote_ssh(ip, curl_command)
+
+
+async def apply_caddyfile(lb_ip):
+    await copy_file(lb_ip, './Caddyfile', '/root/Caddyfile')
 
 
 def generate_caddyfile(redirections):
@@ -41,19 +50,22 @@ def generate_caddyfile(redirections):
     
     caddyfile = caddyfile.replace('{coderamps}', coderamp_redirects)
 
+    with open('Caddyfile', 'w') as f:
+        f.write(caddyfile)
     return caddyfile
 
 
+redirections = {}
+
+async def add_redirect(lb_ip, url, dest_ip):
+    redirections[url] = f'{dest_ip}:8080'
+    
+    generate_caddyfile(redirections)
+    await apply_caddyfile(lb_ip)
 
 
 async def main():
-    redirections = {
-        "supernouvelleurl": "157.25.15.62:8080"
-
-    }
-    
-    a = generate_caddyfile(redirections)
-    print(a)
+    await add_redirect('51.159.179.237', 'test', '157.25.15.62')
 
 if __name__ == "__main__":
     asyncio.run(main())
