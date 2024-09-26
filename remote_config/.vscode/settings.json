@@ -12,5 +12,8 @@
         }
     },
     "terminal.integrated.tabs.enabled": true, // Enable terminal tabs
-    "terminal.integrated.splitCwd": "workspaceRoot"
+    "terminal.integrated.splitCwd": "workspaceRoot",
+    "files.exclude": {
+        "**/.vscode": true
+    }
 }
