@@ -1,2 +1,6 @@
 reflex==0.6.1
-asyncssh==2.17.0
+asyncssh
+peewee
+asyncssh
+python-dotenv
+psycopg2-binary
