@@ -10,4 +10,4 @@ Caddyfile
 __pycache__/
 assets/external/
 remote_config/caddyfile
-venv/
+coderamp_venv/
