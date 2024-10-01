@@ -1,6 +1,13 @@
-.env
+*.db
+*.py[cod]
+.cursorignore
+.venv/
+.vscode/
+.web
 __pycache__/
-ssh_testing.py
+assets/external/
+venv/
+
 remote_config/caddyfile
 /venv/*
-Caddyfile
+.env
