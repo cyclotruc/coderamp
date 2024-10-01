@@ -23,14 +23,14 @@ async def setup_os(ip):
 
 async def setup_code_server(ip):
     await remote_ssh(ip, "curl -fsSL https://code-server.dev/install.sh | sh")
-    await copy_file(ip, "./remote_config/code-server@.service", "/lib/systemd/system/code-server@.service")
+    await copy_file(ip, "/root/coderamp/coderamp/coderamp_lib/remote_config/code-server@.service", "/lib/systemd/system/code-server@.service")
     await remote_ssh(ip, "sudo systemctl enable --now code-server@root")
 
 async def setup_vscode(ip):
     await remote_ssh(ip, "mkdir /coderamp/.vscode")
-    await copy_file(ip, "./remote_config/.vscode/settings.json", "/coderamp/.vscode/settings.json")
-    await copy_file(ip, "./remote_config/.vscode/tasks.json", "/coderamp/.vscode/tasks.json")
-    await copy_file(ip, "./remote_config/.vscode/favicon.ico", "/usr/lib/code-server/src/browser/media/favicon.ico")
+    await copy_file(ip, "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/settings.json", "/coderamp/.vscode/settings.json")
+    await copy_file(ip, "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/tasks.json", "/coderamp/.vscode/tasks.json")
+    await copy_file(ip, "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/favicon.ico", "/usr/lib/code-server/src/browser/media/favicon.ico")
 
 
 async def setup_user_demo(ip):
@@ -51,4 +51,4 @@ async def setup_coderamp(ip):
     await setup_os(ip)
     await setup_code_server(ip)
     await setup_vscode(ip)
-    await copy_file(ip, "./remote_config/main.py", "/coderamp/main.py")
+    await copy_file(ip, "/root/coderamp/coderamp/coderamp_lib/remote_config/main.py", "/coderamp/main.py")

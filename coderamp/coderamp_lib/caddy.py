@@ -33,13 +33,13 @@ async def apply_caddyfile(lb_ip):
 
 
 def generate_caddyfile(redirections):
-    with open('./caddy_templates/caddyfile', 'r') as file:
+    with open('/root/coderamp/coderamp/coderamp_lib/caddy_templates/caddyfile', 'r') as file:
         caddyfile = file.read()
 
-    with open('./caddy_templates/coderamp') as file:
+    with open('/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp') as file:
         coderamp = file.read()
         
-    with open('./caddy_templates/web') as file:
+    with open('/root/coderamp/coderamp/coderamp_lib/caddy_templates/web') as file:
         web = file.read()
 
     caddyfile = caddyfile.replace('{web}', web)

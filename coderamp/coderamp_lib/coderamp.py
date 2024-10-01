@@ -3,10 +3,10 @@ import uuid
 import asyncio
 from dotenv import load_dotenv
 from peewee import *
-
-from scaleway import delete_all_codeboxes, provision_instance
-from install import setup_coderamp
-from caddy import add_redirect
+from datetime import datetime
+from .scaleway import delete_all_codeboxes, provision_instance
+from .install import setup_coderamp
+from .caddy import add_redirect
 
 load_dotenv()
 PG_USER = os.getenv("PG_USER")
@@ -28,6 +28,7 @@ class Coderamp(Model):
     name = TextField(default=name_string)
     base_url = TextField()
     uuid = UUIDField(unique=True, default=new_uuid)
+    created_at = DateTimeField(default=datetime.now)
     
     class Meta:
         database = db 
@@ -50,12 +51,14 @@ class Coderamp(Model):
 class Instance(Model):
     name = CharField()
     state = CharField()
+    created_at = DateTimeField(default=datetime.now)
     public_ip = CharField(null=True,default=None)
     coderamp = ForeignKeyField(Coderamp, backref='instances')
     
 
     async def provision(self):
-        ip = await provision_instance(self.name)
+        ip, id = await provision_instance(self.name)
+        self.id = id
         self.public_ip = ip
         self.state = "provisioned"
         self.save()
@@ -96,32 +99,3 @@ def print_everything():
         for instance in ramp.instances:
             print(instance)
         
-async def main():
-    db.connect()
-
-    full_reset()
-
-    ramp1 = Coderamp.create(base_url="https://codesandboxbeta.cloud")
-    asyncio.create_task(ramp1.new_instance())        
-    await asyncio.sleep(0)
-
-    for i in range(1000):
-        for ramp in Coderamp.select():
-            for instance in ramp.instances:
-                if instance.state == "ready":
-                    await add_redirect('51.159.179.237', 'test/*', instance.public_ip)
-                    print("https://codesandboxbeta.cloud/code/test/?folder=/root/codefast")
-                    return 
-        await asyncio.sleep(1)
-        
-
-
-    print_everything()
-    db.close()
-
-
-
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
