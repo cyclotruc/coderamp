@@ -1,13 +1,13 @@
 *.db
 *.py[cod]
 .cursorignore
+.env
 .venv/
 .vscode/
 .web
+/venv/*
+Caddyfile
 __pycache__/
 assets/external/
-venv/
-
 remote_config/caddyfile
-/venv/*
-.env
+venv/

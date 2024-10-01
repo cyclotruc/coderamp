@@ -101,18 +101,18 @@ async def main():
 
     full_reset()
 
-    # ramp1 = Coderamp.create(base_url="https://codesandboxbeta.cloud")
-    # asyncio.create_task(ramp1.new_instance())        
-    # await asyncio.sleep(0)
+    ramp1 = Coderamp.create(base_url="https://codesandboxbeta.cloud")
+    asyncio.create_task(ramp1.new_instance())        
+    await asyncio.sleep(0)
 
-    # for i in range(1000):
-    #     for ramp in Coderamp.select():
-    #         for instance in ramp.instances:
-    #             if instance.state == "ready":
-    #                 await add_redirect('51.159.179.237', '', instance.public_ip)
-    #                 print("https://codesandboxbeta.cloud/code/test/?folder=/root/codefast")
-    #                 return 
-    #     await asyncio.sleep(1)
+    for i in range(1000):
+        for ramp in Coderamp.select():
+            for instance in ramp.instances:
+                if instance.state == "ready":
+                    await add_redirect('51.159.179.237', 'test/*', instance.public_ip)
+                    print("https://codesandboxbeta.cloud/code/test/?folder=/root/codefast")
+                    return 
+        await asyncio.sleep(1)
         
 
 

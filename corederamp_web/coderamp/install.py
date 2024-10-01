@@ -32,6 +32,10 @@ async def setup_vscode(ip):
     await copy_file(ip, "./remote_config/.vscode/tasks.json", "/coderamp/.vscode/tasks.json")
     await copy_file(ip, "./remote_config/.vscode/favicon.ico", "/usr/lib/code-server/src/browser/media/favicon.ico")
 
+
+async def setup_user_demo(ip):
+    pass
+
 async def wait_for_ssh(ip):
     print("Waiting for ssh...")
     while True:

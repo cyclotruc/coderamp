@@ -1,0 +1,8 @@
+codesandboxbeta.cloud {
+  handle_path /code/* {
+    reverse_proxy 51.159.164.94:8080
+  }
+  handle / {
+    reverse_proxy 51.159.152.167:8000
+  }
+}
