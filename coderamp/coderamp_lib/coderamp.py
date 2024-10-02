@@ -26,9 +26,12 @@ class Coderamp(Model):
     new_uuid = uuid.uuid4()
     name_string = f'coderamp-test-{new_uuid}'
     name = TextField(default=name_string)
-    base_url = TextField()
+    base_url = TextField(default="https://codesandboxbeta.cloud")
     uuid = UUIDField(unique=True, default=new_uuid)
     created_at = DateTimeField(default=datetime.now)
+    max_instances = IntegerField(default=10)
+    current_instances = IntegerField(default=0)
+
     
     class Meta:
         database = db 
@@ -39,13 +42,6 @@ class Coderamp(Model):
         await instance.provision()
         await instance.start()
         return instance
-    
-    def __repr__(self):
-        return f"Coderamp(name={self.name}, uuid={self.uuid})"
-    
-    def __str__(self):
-        return self.__repr__()
-    
 
 
 class Instance(Model):
@@ -54,11 +50,11 @@ class Instance(Model):
     created_at = DateTimeField(default=datetime.now)
     public_ip = CharField(null=True,default=None)
     coderamp = ForeignKeyField(Coderamp, backref='instances')
+    session_id = CharField(null=True,default=None)
     
 
     async def provision(self):
-        ip, id = await provision_instance(self.name)
-        self.id = id
+        ip = await provision_instance(self.name)
         self.public_ip = ip
         self.state = "provisioned"
         self.save()
@@ -75,27 +71,10 @@ class Instance(Model):
         database = db
         table_name = 'instances'
 
-    def __repr__(self):
-        return f"Instance(id={self.id}, name={self.name}, state={self.state}, public_ip={self.public_ip})"
-
-    def __str__(self):
-        return self.__repr__()
-
-
-
 def full_reset():
     reset_db()
     delete_all_codeboxes()
 
-
 def reset_db():
     db.drop_tables([Coderamp,Instance])
     db.create_tables([Coderamp,Instance])
-
-
-def print_everything():
-    for ramp in Coderamp.select():
-        print(ramp)
-        for instance in ramp.instances:
-            print(instance)
-        

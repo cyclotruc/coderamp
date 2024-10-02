@@ -138,4 +138,4 @@ async def provision_instance(name):
     start_instance(new_id)
     await wait_for_ready(new_id)
     ip = await wait_for_ip(new_id)
-    return ip, new_id
+    return ip
