@@ -1,4 +1,4 @@
- handle_path /code/{path} {
+ handle_path {path} {
     reverse_proxy {ip}
   }
   
