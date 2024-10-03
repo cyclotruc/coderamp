@@ -12,12 +12,11 @@ PG_USER = os.getenv("PG_USER")
 PG_PASSWORD = os.getenv("PG_PASSWORD")
 
 db = PostgresqlDatabase(
-    'coderamp_dev',
+    "coderamp_dev",
     user=PG_USER,
     password=PG_PASSWORD,
-    host='localhost',
+    host="localhost",
     port=5432,
-    
 )
 
 
@@ -31,21 +30,20 @@ class Coderamp(Model):
     current_instances = IntegerField(default=0)
     ready = BooleanField(default=False)
 
-    #User-input defined variables, they are set in configure:
+    # User-input defined variables, they are set in configure:
     name = TextField(null=True, default=None)
     magic_url = TextField(null=True, default=None)
-    code_repo = TextField(null=True, default=None)
+    git_url = TextField(null=True, default=None)
     setup_commands = TextField(null=True, default=None)
-
 
     class Meta:
         database = db
-        table_name = 'coderamp'
+        table_name = "coderamp"
 
-    def configure(self, name, code_repo, setup_commands):
+    def configure(self, name, git_url, setup_commands):
         self.name = name
         self.magic_url = f"https://codesandboxdemo.cloud/new/?id={name}"
-        self.code_repo = code_repo
+        self.git_url = git_url
         self.setup_commands = setup_commands
         self.ready = True
         self.save()
@@ -58,16 +56,19 @@ class Coderamp(Model):
             return instance
         else:
             raise Exception("Failed to provision Instance: Coderamp not ready")
-        
+
     async def allocate_session(self, session_id):
-        instance = Instance.select().where(Instance.allocated_to_session_id == None).order_by(Instance.created_at.asc()).first()
+        instance = (
+            Instance.select()
+            .where(Instance.allocated_to_session_id == None)
+            .order_by(Instance.created_at.asc())
+            .first()
+        )
         if instance:
             instance.allocate(session_id)
             return instance
         else:
             raise Exception("No instance available to allocate")
-
-
 
     # async def tick(self):
     #     print("[TICK]")
@@ -76,14 +77,11 @@ class Coderamp(Model):
     #     ready_instances = len(Instance.select().where(Instance.state == "ready"))
 
     # count provisionning instances
-    # if ready + provisionning  < min: 
-        # provision new instance
+    # if ready + provisionning  < min:
+    # provision new instance
 
     # fetch all instances too old to survive:
-            # delete them
-
-
-
+    # delete them
 
 
 class Instance(Model):
@@ -91,11 +89,10 @@ class Instance(Model):
     name = CharField()
     state = CharField(default="created")
     created_at = DateTimeField(default=datetime.now)
-    remote_id = CharField(null=True,default=None)
-    public_ip = CharField(null=True,default=None)
-    coderamp = ForeignKeyField(Coderamp, backref='instances')
-    allocated_to_session_id = CharField(null=True,default=None)
-
+    remote_id = CharField(null=True, default=None)
+    public_ip = CharField(null=True, default=None)
+    coderamp = ForeignKeyField(Coderamp, backref="instances")
+    allocated_to_session_id = CharField(null=True, default=None)
 
     async def provision(self):
         id, ip = await provision_instance(self.name)
@@ -123,12 +120,14 @@ class Instance(Model):
 
     class Meta:
         database = db
-        table_name = 'instances'
+        table_name = "instances"
+
 
 def full_reset():
     reset_db()
     delete_all_codeboxes()
 
+
 def reset_db():
-    db.drop_tables([Coderamp,Instance])
-    db.create_tables([Coderamp,Instance])
+    db.drop_tables([Coderamp, Instance])
+    db.create_tables([Coderamp, Instance])

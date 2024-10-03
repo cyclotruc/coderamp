@@ -1,4 +1,4 @@
-import asyncio 
+import asyncio
 import reflex as rx
 
 from rxconfig import config
@@ -10,17 +10,26 @@ from coderamp.coderamp_lib.coderamp import Instance, Coderamp
 # or https://kroo.github.io/reflex-clerk/
 
 
+class FormState(rx.State):
+    name: str = ""
+    url: str = ""
+    commands: str = ""
+
+    def handle_submit(self, form_data):
+        self.name = form_data["name"]
+        self.url = form_data["url"]
+        self.commands = form_data["commands"]
+        ramp = Coderamp.create(name=self.name, url=self.url, commands=self.commands)
+        ramp.configure(name=self.name, git_url=self.url, setup_commands=self.commands)
+
+        print(f"Received: {self.name}, {self.url}, {self.commands}")
+
+
 class State(rx.State):
     """The app state."""
 
-    instances: list[Instance] = []
-    coderamps: list[Coderamp] = []
-
-    @rx.background
-    async def create_instance(self):
-        for coderamp in Coderamp.select():
-            await coderamp.new_instance()
-
+    instances: list = []
+    coderamps: list = []
 
     def refresh_all(self):
         self.refresh_instances()
@@ -42,29 +51,62 @@ class State(rx.State):
         self.coderamps = []
         all_coderamps = Coderamp.select()
         for coderamp in all_coderamps:
-            print(coderamp)
             id = coderamp.id or "None"
             name = coderamp.name or "None"
-            base_url = coderamp.base_url or "None"
             uuid = str(coderamp.uuid) or "None"
             created_at = str(coderamp.created_at) or "None"
-            max_instances = coderamp.max_instances or "None"
             current_instances = coderamp.current_instances or "None"
 
-            self.coderamps.append(
-                [id, name, base_url, uuid, created_at, max_instances, current_instances]
-            )
+            self.coderamps.append([id, name, uuid, created_at, current_instances])
 
 
-@rx.page(route="/user")
-def show_user_page():
-        return dummy_page(State.router.page.params, State.router.session.session_id)
+@rx.page(route="/create")
+def create() -> rx.Component:
+    return rx.center(
+        rx.container(
+            rx.vstack(
+                create_form(),
+                coderamps_table(),
+                width="100%",
+            ),
+        ),
+    )
+
+
+def create_form() -> rx.Component:
+    return rx.center(
+        rx.card(
+            rx.vstack(
+                rx.heading("Create a new Coderamp"),
+                rx.form(
+                    rx.vstack(
+                        rx.input(
+                            placeholder="Coderamp name",
+                            name="name",
+                        ),
+                        rx.input(
+                            placeholder="Github URL",
+                            name="url",
+                        ),
+                        rx.input(
+                            placeholder="Startup commands",
+                            name="commands",
+                        ),
+                        rx.button("Create", type="submit"),
+                    ),
+                    on_submit=FormState.handle_submit,
+                    reset_on_submit=True,
+                ),
+            ),
+            width="400px",
+        )
+    )
 
 
 def dummy_page(username, session_id) -> rx.Component:
     return rx.vstack(
         rx.heading(f"Dummyaaaa page {username['id']} {session_id}"),
-        rx.button("Back", on_click=rx.redirect("https://codesandboxbeta.cloud") ),
+        rx.button("Back", on_click=rx.redirect("https://codesandboxbeta.cloud")),
     )
 
 
@@ -79,22 +121,22 @@ def instances_table() -> rx.Component:
             sort=True,
             width="100%",
         ),
+        on_mount=State.refresh_instances,
     )
 
 
 def coderamps_table() -> rx.Component:
     return rx.vstack(
         rx.heading("Coderamps", size="lg"),
+        rx.spacer(),
+        rx.button("Refresh Coderamps", on_click=State.refresh_coderamps),
         rx.data_table(
             data=State.coderamps,
             columns=[
                 "id",
                 "name",
-                "base_url",
                 "uuid",
                 "created_at",
-                "max_instances",
-                "current_instances",
             ],
             pagination=True,
             search=True,
@@ -102,7 +144,7 @@ def coderamps_table() -> rx.Component:
             width="100%",
         ),
         width="100%",
-        padding="4",
+        on_mount=State.refresh_coderamps,
     )
 
 
@@ -112,8 +154,7 @@ def instances() -> rx.Component:
         rx.hstack(
             rx.heading("Dashboard", size="lg"),
             rx.spacer(),
-            rx.button("Refresh", on_click=State.refresh_all),
-            rx.button("Create Instance", on_click=State.create_instance),
+            rx.button("Refresh all", on_click=State.refresh_all),
             width="100%",
             padding="4",
         ),
@@ -123,16 +164,21 @@ def instances() -> rx.Component:
         spacing="4",
     )
 
+@rx.page(route="/")
+def index() -> rx.Component:
+    return rx.vstack(
+           rx.heading("Welcome to Coderamp"),
+           rx.button("Create a new Coderamp", on_click=rx.redirect("/create")),
+    )
+
 
 async def global_tick():
     try:
         while True:
-            await asyncio.sleep(
-                5
-            )
+            await asyncio.sleep(5)
             print("global tick")
     except asyncio.CancelledError:
-         # clean up if needed
+        # clean up if needed
         print("Task was stopped")
 
 
