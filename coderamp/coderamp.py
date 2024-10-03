@@ -1,3 +1,4 @@
+import asyncio 
 import reflex as rx
 
 from rxconfig import config
@@ -6,6 +7,7 @@ from coderamp.coderamp_lib.coderamp import Instance, Coderamp
 
 # TODO:
 # https://reflex.dev/blog/2023-10-25-implementing-sign-in-with-google/
+# or https://kroo.github.io/reflex-clerk/
 
 
 class State(rx.State):
@@ -18,6 +20,7 @@ class State(rx.State):
     async def create_instance(self):
         for coderamp in Coderamp.select():
             await coderamp.new_instance()
+
 
     def refresh_all(self):
         self.refresh_instances()
@@ -32,7 +35,7 @@ class State(rx.State):
             name = instance.name or "None"
             state = instance.state or "None"
             public_ip = instance.public_ip or "None"
-            
+
             self.instances.append([id, name, state, public_ip])
 
     def refresh_coderamps(self):
@@ -47,20 +50,27 @@ class State(rx.State):
             created_at = str(coderamp.created_at) or "None"
             max_instances = coderamp.max_instances or "None"
             current_instances = coderamp.current_instances or "None"
-            
-            self.coderamps.append([id, name, base_url, uuid, created_at, max_instances, current_instances])
+
+            self.coderamps.append(
+                [id, name, base_url, uuid, created_at, max_instances, current_instances]
+            )
 
 
-def instances() -> rx.Component:
+@rx.page(route="/user")
+def show_user_page():
+        return dummy_page(State.router.page.params, State.router.session.session_id)
+
+
+def dummy_page(username, session_id) -> rx.Component:
     return rx.vstack(
-        rx.hstack(
-            rx.heading("Coderamp Instances", size="lg"),
-            rx.spacer(),
-            rx.button("Refresh", on_click=State.refresh_all),
-            rx.button("Create Instance", on_click=State.create_instance),
-            width="100%",
-            padding="4",
-        ),
+        rx.heading(f"Dummyaaaa page {username['id']} {session_id}"),
+        rx.button("Back", on_click=rx.redirect("https://codesandboxbeta.cloud") ),
+    )
+
+
+def instances_table() -> rx.Component:
+    return rx.vstack(
+        rx.heading("Instances", size="lg"),
         rx.data_table(
             data=State.instances,
             columns=["id", "name", "state", "public_ip"],
@@ -69,28 +79,62 @@ def instances() -> rx.Component:
             sort=True,
             width="100%",
         ),
-        rx.hstack(
-            rx.heading("Coderamps", size="lg"),
-            width="100%",
-            padding="4",
-        ),
+    )
+
+
+def coderamps_table() -> rx.Component:
+    return rx.vstack(
+        rx.heading("Coderamps", size="lg"),
         rx.data_table(
             data=State.coderamps,
-            columns=["id", "name", "base_url", "uuid", "created_at", "max_instances", "current_instances"],
+            columns=[
+                "id",
+                "name",
+                "base_url",
+                "uuid",
+                "created_at",
+                "max_instances",
+                "current_instances",
+            ],
             pagination=True,
             search=True,
             sort=True,
             width="100%",
         ),
+        width="100%",
+        padding="4",
+    )
+
+
+@rx.page(route="/dashboard")
+def instances() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Dashboard", size="lg"),
+            rx.spacer(),
+            rx.button("Refresh", on_click=State.refresh_all),
+            rx.button("Create Instance", on_click=State.create_instance),
+            width="100%",
+            padding="4",
+        ),
+        instances_table(),
+        coderamps_table(),
         width="90%",
         spacing="4",
     )
 
-def coderamps() -> rx.Component:
-    return rx.container(
-        
-    )
+
+async def global_tick():
+    try:
+        while True:
+            await asyncio.sleep(
+                5
+            )
+            print("global tick")
+    except asyncio.CancelledError:
+         # clean up if needed
+        print("Task was stopped")
+
 
 app = rx.App()
-app.add_page(instances)
-app.add_page(coderamps)
+app.register_lifespan_task(global_tick)
