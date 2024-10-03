@@ -11,3 +11,4 @@ __pycache__/
 assets/external/
 remote_config/caddyfile
 coderamp_venv/
+coderamp/test.py
