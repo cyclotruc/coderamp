@@ -64,7 +64,8 @@ class Coderamp(Model):
     async def allocate_session(self, session_id):
         instance = (
             Instance.select()
-            .where(Instance.allocated_to_session_id == None)
+            .where(Instance.coderamp == self.get_id())
+            .where(Instance.state == "ready")
             .order_by(Instance.created_at.asc())
             .first()
         )
@@ -95,11 +96,12 @@ class Instance(Model):
     created_at = DateTimeField(default=datetime.now)
     remote_id = CharField(null=True, default=None)
     public_ip = CharField(null=True, default=None)
+    public_url = CharField(null=True, default=None)
     coderamp = ForeignKeyField(Coderamp, backref="instances")
     allocated_to_session_id = CharField(null=True, default=None)
 
     async def provision(self):
-        id, ip = await provision_instance(f"{self.slug}-{self.uuid}")
+        id, ip = await provision_instance(f"{self.coderamp.slug}-{self.uuid}")
         self.remote_id = id
         self.public_ip = ip
         self.state = "provisioned"
@@ -108,6 +110,7 @@ class Instance(Model):
     async def setup(self, coderamp):
         await setup_coderamp(self, coderamp)
         self.state = "ready"
+        self.public_url = f"https://codesandboxbeta.cloud/{self.coderamp.slug}/{self.uuid}/?folder=/coderamp"
         self.save()
 
     def allocate(self, session_id):

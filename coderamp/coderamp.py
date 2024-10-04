@@ -60,6 +60,46 @@ class State(rx.State):
             self.coderamps.append([id, name, uuid, created_at, current_instances])
 
 
+class MagicState(rx.State):
+    found: bool = False
+    instance_url: str = None
+
+    @rx.background
+    async def find_coderamp(self):
+        async with self:
+            self.reset()
+        id = self.router.page.params["id"]
+        session_id = self.router.session.session_id
+
+        print(f"Finding instance {id}")
+        ramp = Coderamp.select().where(Coderamp.slug == id).first()
+        if ramp:
+            instance = await ramp.allocate_session(session_id)
+            async with self:
+                print(f"Found!! and allocated to {session_id}")
+                self.found = True
+                self.instance_url = instance.public_url
+        # TODO handle not ready
+        # TODO handle not found
+
+
+@rx.page(route="/new", on_load=MagicState.find_coderamp)
+def new() -> rx.Component:
+    id = State.router.page.params["id"]
+
+    instance_url = MagicState.instance_url
+    return rx.vstack(
+        rx.heading(
+            f"Redirecting to {id}",
+        ),
+        rx.cond(
+            MagicState.found,
+            rx.fragment(rx.script(f"window.location.href = '{instance_url}'")),
+            rx.spinner(size="3"),
+        ),
+    )
+
+
 @rx.page(route="/create")
 def create() -> rx.Component:
     return rx.center(
