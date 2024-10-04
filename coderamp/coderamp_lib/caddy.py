@@ -1,16 +1,14 @@
 import os
-import sys
-import asyncio
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
 import asyncssh
-import json
 
-load_dotenv()   
+load_dotenv()
 CADDY_PUBLIC_IP = os.getenv("CADDY_PUBLIC_IP")
 CADDY_USERNAME = os.getenv("CADDY_USERNAME")
 
+
 async def remote_ssh(ip, command):
-    async with asyncssh.connect(ip, username='root', known_hosts=None) as conn:
+    async with asyncssh.connect(ip, username="root", known_hosts=None) as conn:
         process = await conn.create_process(command)
         output = ""
         async for line in process.stdout:
@@ -18,8 +16,9 @@ async def remote_ssh(ip, command):
         await process.wait()
         return output
 
+
 async def copy_file(ip, local_path, remote_path):
-    async with asyncssh.connect(ip, username='root',known_hosts=None) as conn:
+    async with asyncssh.connect(ip, username="root", known_hosts=None) as conn:
         await asyncssh.scp(local_path, (conn, remote_path))
 
 
@@ -29,44 +28,40 @@ async def get_config(ip):
 
 
 async def apply_caddyfile(lb_ip):
-    await copy_file(lb_ip, './Caddyfile', '/root/Caddyfile')
+    await copy_file(lb_ip, "./Caddyfile", "/root/Caddyfile")
 
 
-def generate_caddyfile(redirections):
-    with open('/root/coderamp/coderamp/coderamp_lib/caddy_templates/caddyfile', 'r') as file:
+def generate_caddyfile(instances):
+    with open(
+        "/root/coderamp/coderamp/coderamp_lib/caddy_templates/caddyfile", "r"
+    ) as file:
         caddyfile = file.read()
 
-    with open('/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp') as file:
+    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp") as file:
         coderamp = file.read()
-        
-    with open('/root/coderamp/coderamp/coderamp_lib/caddy_templates/web') as file:
+
+    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/web") as file:
         web = file.read()
 
-    caddyfile = caddyfile.replace('{web}', web)
+    caddyfile = caddyfile.replace("{web}", web)
 
     coderamp_redirects = ""
-    for i in redirections:
-        coderamp_redirects += coderamp.replace("{ip}", redirections[i]).replace("{path}", i)
-    
-    caddyfile = caddyfile.replace('{coderamps}', coderamp_redirects)
+    for i in instances:
 
-    with open('Caddyfile', 'w') as f:
+        coderamp_redirects += coderamp.replace("{ip}", f"{i.public_ip}:8080").replace(
+            "{path}", f"/{i.coderamp.slug}/{i.uuid}/*"
+        )
+
+    caddyfile = caddyfile.replace("{coderamps}", coderamp_redirects)
+
+    with open("Caddyfile", "w") as f:
         f.write(caddyfile)
     return caddyfile
 
 
-redirections = {}
-
-async def add_redirect(lb_ip, url, dest_ip):
-    redirections[url] = f'{dest_ip}:8080'
-    
-    generate_caddyfile(redirections)
-    await apply_caddyfile(lb_ip)
+CADDY_IP = os.getenv("CADDY_IP")
 
 
-async def main():
-    await add_redirect('51.159.179.237', 'test', '157.25.15.62')
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
+async def update_caddy(instances):
+    generate_caddyfile(instances)
+    await apply_caddyfile(CADDY_IP)
