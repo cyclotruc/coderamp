@@ -12,12 +12,12 @@ from coderamp.coderamp_lib.coderamp import Instance, Coderamp
 
 class FormState(rx.State):
     name: str = ""
-    url: str = ""
+    git_url: str = ""
     commands: str = ""
 
     def handle_submit(self, form_data):
         self.name = form_data["name"]
-        self.url = form_data["url"]
+        self.git_url = form_data["url"]
         self.commands = form_data["commands"]
         ramp = Coderamp.create(name=self.name, url=self.url, commands=self.commands)
         ramp.configure(name=self.name, git_url=self.url, setup_commands=self.commands)
@@ -86,10 +86,10 @@ def create_form() -> rx.Component:
                         ),
                         rx.input(
                             placeholder="Github URL",
-                            name="url",
+                            name="git_url",
                         ),
-                        rx.input(
-                            placeholder="Startup commands",
+                        rx.text_area(
+                            placeholder="Startup commands, separated by newlines",
                             name="commands",
                         ),
                         rx.button("Create", type="submit"),
@@ -164,11 +164,12 @@ def instances() -> rx.Component:
         spacing="4",
     )
 
+
 @rx.page(route="/")
 def index() -> rx.Component:
     return rx.vstack(
-           rx.heading("Welcome to Coderamp"),
-           rx.button("Create a new Coderamp", on_click=rx.redirect("/create")),
+        rx.heading("Welcome to Coderamp"),
+        rx.button("Create a new Coderamp", on_click=rx.redirect("/create")),
     )
 
 
