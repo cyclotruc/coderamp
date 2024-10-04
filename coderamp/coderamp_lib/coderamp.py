@@ -6,6 +6,7 @@ from peewee import *
 from datetime import datetime
 from .scaleway import delete_all_codeboxes, provision_instance, terminate_instance
 from .install import setup_coderamp
+from .caddy import update_caddy
 
 load_dotenv()
 PG_USER = os.getenv("PG_USER")
@@ -32,6 +33,7 @@ class Coderamp(Model):
 
     # User-input defined variables, they are set in configure:
     name = TextField(null=True, default=None)
+    slug = TextField(null=True, default=None)
     magic_url = TextField(null=True, default=None)
     git_url = TextField(null=True, default=None)
     setup_commands = TextField(null=True, default=None)
@@ -42,6 +44,7 @@ class Coderamp(Model):
 
     def configure(self, name, git_url, setup_commands):
         self.name = name
+        self.slug = name.lower().replace(" ", "-")
         self.magic_url = f"https://codesandboxdemo.cloud/new/?id={name}"
         self.git_url = git_url
         self.setup_commands = setup_commands
@@ -53,6 +56,7 @@ class Coderamp(Model):
             instance = Instance.create(name=self.name, state="created", coderamp=self)
             await instance.provision()
             await instance.setup(self)
+            await update_caddy(Instance.select().where(Instance.state == "ready"))
             return instance
         else:
             raise Exception("Failed to provision Instance: Coderamp not ready")
@@ -95,7 +99,7 @@ class Instance(Model):
     allocated_to_session_id = CharField(null=True, default=None)
 
     async def provision(self):
-        id, ip = await provision_instance(self.name)
+        id, ip = await provision_instance(f"{self.slug}-{self.uuid}")
         self.remote_id = id
         self.public_ip = ip
         self.state = "provisioned"

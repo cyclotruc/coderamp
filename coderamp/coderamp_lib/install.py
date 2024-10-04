@@ -2,7 +2,6 @@ import asyncio
 import asyncssh
 import time
 import sys
-from .caddy import add_redirect
 
 
 async def remote_ssh(ip, command):
@@ -84,8 +83,3 @@ async def setup_coderamp(instance, coderamp):
     await setup_code_server(instance.public_ip)
     await setup_user_demo(instance.public_ip, coderamp.git_url, coderamp.setup_commands)
     await setup_vscode(instance.public_ip)
-    await add_redirect(
-        "51.159.179.237", f"/{coderamp.name}/{instance.uuid}/*", instance.public_ip
-    )
-    url = f"https://codesandboxdemo.cloud/{coderamp.name}/{instance.uuid}/?folder=/coderamp"
-    return url
