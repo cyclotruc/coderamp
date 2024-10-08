@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=exec
-ExecStart=/usr/bin/code-server --disable-workspace-trust --disable-getting-started-override --bind-addr 0.0.0.0:8080 --auth none --app-name coderamp 
+ExecStart=/usr/bin/code-server --disable-workspace-trust --proxy-domain {domain} --disable-getting-started-override --bind-addr 0.0.0.0:8080 --auth none --app-name coderamp 
 Restart=always
 User=%i
 

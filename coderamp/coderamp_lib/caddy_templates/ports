@@ -1,0 +1,5 @@
+{port}.codesandboxbeta.cloud {
+  handle_path {path} {
+    reverse_proxy {ip}:{port}
+  }
+}
