@@ -22,13 +22,8 @@ async def copy_file(ip, local_path, remote_path):
         await asyncssh.scp(local_path, (conn, remote_path))
 
 
-async def get_config(ip):
-    curl_command = f"curl 'http://localhost:2019/config/' -H 'Accept: application/json'"
-    return await remote_ssh(ip, curl_command)
-
-
-async def apply_caddyfile(lb_ip):
-    await copy_file(lb_ip, "./Caddyfile", "/root/Caddyfile")
+async def apply_caddyfile():
+    await copy_file(CADDY_PUBLIC_IP, "./Caddyfile", "/root/Caddyfile")
 
 
 def generate_caddyfile(instances):
@@ -37,13 +32,12 @@ def generate_caddyfile(instances):
     ) as file:
         caddyfile = file.read()
 
-    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp") as file:
-        coderamp = file.read()
-
     with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/web") as file:
         web = file.read()
-
     caddyfile = caddyfile.replace("{web}", web)
+
+    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp") as file:
+        coderamp = file.read()
 
     coderamp_redirects = ""
     for i in instances:
@@ -53,6 +47,21 @@ def generate_caddyfile(instances):
         )
 
     caddyfile = caddyfile.replace("{coderamps}", coderamp_redirects)
+
+    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/ports") as file:
+        ports = file.read()
+
+    ports_redirects = ""
+    for i in instances:
+        if i.coderamp.ports:
+            for port in i.coderamp.ports.split(","):
+                ports_redirects += (
+                    ports.replace("{port}", port)
+                    .replace("{ip}", i.public_ip)
+                    .replace("{path}", f"/{i.coderamp.slug}/{i.uuid}/*")
+                )
+                ports_redirects += "\n"
+    caddyfile = caddyfile.replace("{ports}", ports_redirects)
 
     with open("Caddyfile", "w") as f:
         f.write(caddyfile)
@@ -64,4 +73,4 @@ CADDY_IP = os.getenv("CADDY_IP")
 
 async def update_caddy(instances):
     generate_caddyfile(instances)
-    await apply_caddyfile(CADDY_IP)
+    await apply_caddyfile()

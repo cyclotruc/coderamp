@@ -37,17 +37,19 @@ class Coderamp(Model):
     magic_url = TextField(null=True, default=None)
     git_url = TextField(null=True, default=None)
     setup_commands = TextField(null=True, default=None)
+    ports = TextField(null=True, default=None)
 
     class Meta:
         database = db
         table_name = "coderamp"
 
-    def configure(self, name, git_url, setup_commands):
+    def configure(self, name, git_url, setup_commands, ports):
         self.name = name
         self.slug = name.lower().replace(" ", "-")
         self.magic_url = f"https://codesandboxdemo.cloud/new/?id={name}"
         self.git_url = git_url
         self.setup_commands = setup_commands
+        self.ports = ports
         self.ready = True
         self.save()
 
@@ -55,7 +57,7 @@ class Coderamp(Model):
         if self.ready:
             instance = Instance.create(name=self.name, state="created", coderamp=self)
             await instance.provision()
-            await instance.setup(self)
+            await instance.setup()
             await update_caddy(Instance.select().where(Instance.state == "ready"))
             return instance
         else:
@@ -107,8 +109,8 @@ class Instance(Model):
         self.state = "provisioned"
         self.save()
 
-    async def setup(self, coderamp):
-        await setup_coderamp(self, coderamp)
+    async def setup(self):
+        await setup_coderamp(self)
         self.state = "ready"
         self.public_url = f"https://codesandboxbeta.cloud/{self.coderamp.slug}/{self.uuid}/?folder=/coderamp"
         self.save()
