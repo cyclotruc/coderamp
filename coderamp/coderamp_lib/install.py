@@ -68,7 +68,7 @@ async def setup_code_server(ip, domain):
 
 
 async def setup_user_demo(ip, repo_url, setup_commands):
-    print("USER SETUP!!!!!!!!!!!!!!!\n" * 10)
+    print("[USER SETUP]")
     if repo_url:
         cmd = f"git clone {repo_url} /coderamp"
         await remote_ssh(ip, cmd)
@@ -78,17 +78,22 @@ async def setup_user_demo(ip, repo_url, setup_commands):
         print(f"------------------------")
 
 
-async def setup_vscode(ip):
+async def setup_vscode(ip, open_file, open_folder):
     await remote_ssh(ip, "mkdir /coderamp/.vscode")
     await copy_file(
         ip,
         "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/settings.json",
-        "/coderamp/.vscode/settings.json",
+        f"{open_folder}/.vscode/settings.json",
     )
-    await copy_file(
+    with open(
+        "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/tasks.json"
+    ) as file:
+        content = file.read()
+        content = content.replace("{open_file}", open_file)
+    await write_to_remote_file(
         ip,
-        "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/tasks.json",
-        "/coderamp/.vscode/tasks.json",
+        content,
+        f"{open_folder}/.vscode/tasks.json",
     )
 
 
@@ -103,4 +108,6 @@ async def setup_coderamp(instance):
     await setup_user_demo(
         instance.public_ip, instance.coderamp.git_url, instance.coderamp.setup_commands
     )
-    await setup_vscode(instance.public_ip)
+    await setup_vscode(
+        instance.public_ip, instance.coderamp.open_file, instance.coderamp.open_folder
+    )

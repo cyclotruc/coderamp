@@ -38,19 +38,34 @@ class Coderamp(Model):
     setup_commands = TextField(null=True, default=None)
     ports = TextField(null=True, default=None)
     timeout = IntegerField(default=3600)
-    vm_model = CharField(default="DEV1-S")
-    # landing_page = TextField(null=True, default=None)
-    # default_folder = TextField(null=True, default=None)
+    vm_type = CharField(default="DEV1-S")
+    open_file = TextField(null=True, default=None)
+    open_folder = TextField(null=True, default=None)
+    # workspace_folder_name = TextField(null=True, default=None)
 
     class Meta:
         database = db
         table_name = "coderamp"
 
-    def configure(self, name, git_url, setup_commands, ports):
+    def configure(
+        self,
+        name,
+        open_file="",
+        open_folder="/",
+        git_url="",
+        setup_commands="",
+        ports="",
+        vm_type="DEV1-S",
+        timeout=3600,
+    ):
         self.name = name
+        self.open_file = open_file
+        self.open_folder = open_folder
         self.slug = name.lower().replace(" ", "-")
-        self.magic_url = f"https://codesandboxdemo.cloud/new/?id={name}"
+        self.magic_url = f"https://codesandboxdemo.cloud/new/?id={self.slug}"
         self.git_url = git_url
+        self.vm_type = vm_type
+        self.timeout = timeout
         self.setup_commands = setup_commands
         self.ports = ports
         self.ready = True
@@ -61,7 +76,11 @@ class Coderamp(Model):
             instance = Instance.create(name=self.name, state="created", coderamp=self)
             await instance.provision()
             await instance.setup()
-            await update_caddy(Instance.select().where(Instance.state == "ready"))
+            await update_caddy(
+                Instance.select().where(
+                    (Instance.state == "ready") | (Instance.state == "allocated")
+                )
+            )
             return instance
         else:
             raise Exception("Failed to provision Instance: Coderamp not ready")
@@ -122,40 +141,6 @@ class Coderamp(Model):
         database = db
         table_name = "coderamp"
 
-    def configure(
-        self,
-        name,
-        git_url="",
-        setup_commands="",
-        ports="",
-        vm_model="DEV1-S",
-        timeout=3600,
-    ):
-        self.name = name
-        self.slug = name.lower().replace(" ", "-")
-        self.magic_url = f"https://codesandboxdemo.cloud/new/?id={self.slug}"
-        self.git_url = git_url
-        self.vm_model = vm_model
-        self.timeout = timeout
-        self.setup_commands = setup_commands
-        self.ports = ports
-        self.ready = True
-        self.save()
-
-    async def new_instance(self):
-        if self.ready:
-            instance = Instance.create(name=self.name, state="created", coderamp=self)
-            await instance.provision()
-            await instance.setup()
-            await update_caddy(
-                Instance.select().where(
-                    (Instance.state == "ready") & (Instance.state == "allocated")
-                )
-            )
-            return instance
-        else:
-            raise Exception("Failed to provision Instance: Coderamp not ready")
-
     async def allocate_session(self, session_id):
         instance = (
             Instance.select()
@@ -185,7 +170,7 @@ class Instance(Model):
 
     async def provision(self):
         id, ip = await provision_instance(
-            f"{self.coderamp.slug}-{self.uuid}", self.coderamp.vm_model
+            f"{self.coderamp.slug}-{self.uuid}", self.coderamp.vm_type
         )
         self.remote_id = id
         self.public_ip = ip
@@ -195,7 +180,7 @@ class Instance(Model):
     async def setup(self):
         await setup_coderamp(self)
         self.state = "ready"
-        self.public_url = f"https://{self.uuid}.codesandboxbeta.cloud/?folder=/coderamp"
+        self.public_url = f"https://{self.uuid}.codesandboxbeta.cloud/?folder={self.coderamp.open_folder}"
         self.save()
 
     def allocate(self, session_id):
