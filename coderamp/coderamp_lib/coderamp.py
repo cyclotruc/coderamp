@@ -206,10 +206,16 @@ class Instance(Model):
 
 
 def full_reset():
-    reset_db()
+    reset_instances()
+    reset_coderamps()
+
+
+def reset_instances():
+    db.drop_tables([Instance])
+    db.create_tables([Instance])
     delete_all_codeboxes()
 
 
-def reset_db():
-    db.drop_tables([Coderamp, Instance])
-    db.create_tables([Coderamp, Instance])
+def reset_coderamps():
+    db.drop_tables([Coderamp])
+    db.create_tables([Coderamp])
