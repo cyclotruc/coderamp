@@ -1,4 +1,5 @@
- handle_path {path} {
-    reverse_proxy {ip}
+{uuid}.codesandboxbeta.cloud {
+ handle /* {
+    reverse_proxy {ip}:8080
   }
-  
+}

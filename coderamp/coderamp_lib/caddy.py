@@ -42,9 +42,10 @@ def generate_caddyfile(instances):
     coderamp_redirects = ""
     for i in instances:
 
-        coderamp_redirects += coderamp.replace("{ip}", f"{i.public_ip}:8080").replace(
-            "{path}", f"/{i.coderamp.slug}/{i.uuid}/*"
+        coderamp_redirects += coderamp.replace("{ip}", f"{i.public_ip}").replace(
+            "{uuid}", f"{i.uuid}"
         )
+        coderamp_redirects += "\n"
 
     caddyfile = caddyfile.replace("{coderamps}", coderamp_redirects)
 
@@ -58,7 +59,7 @@ def generate_caddyfile(instances):
                 ports_redirects += (
                     ports.replace("{port}", port)
                     .replace("{ip}", i.public_ip)
-                    .replace("{path}", f"/{i.coderamp.slug}/{i.uuid}/*")
+                    .replace("{uuid}", f"{i.uuid}")
                 )
                 ports_redirects += "\n"
     caddyfile = caddyfile.replace("{ports}", ports_redirects)

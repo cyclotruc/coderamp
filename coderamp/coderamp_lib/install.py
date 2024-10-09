@@ -97,7 +97,7 @@ async def setup_coderamp(instance):
     await setup_os(instance.public_ip)
     await setup_code_server(
         instance.public_ip,
-        f"codesandboxbeta.cloud/{instance.coderamp.slug}/{instance.uuid}/",
+        f"{instance.uuid}.codesandboxbeta.cloud/",
     )
     print("USER SETUPWITH ", instance.coderamp.setup_commands)
     await setup_user_demo(

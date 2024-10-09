@@ -1,5 +1,5 @@
-{port}.codesandboxbeta.cloud {
-  handle_path {path} {
+{port}.{uuid}.codesandboxbeta.cloud {
+  handle_path /* {
     reverse_proxy {ip}:{port}
   }
 }

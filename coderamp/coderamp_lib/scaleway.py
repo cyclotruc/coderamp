@@ -58,11 +58,11 @@ def terminate_instance(id):
         )
 
 
-def create_instance(name):
+def create_instance(name, commercial_type):
     url = f"https://api.scaleway.com/instance/v1/zones/{SCW_DEFAULT_ZONE}/servers"
 
     data = {
-        "commercial_type": "DEV1-S",
+        "commercial_type": commercial_type,
         "image": "77f47c21-772d-4c10-ac97-f5949447df66",
         "name": name,
         "tags": [
@@ -142,8 +142,8 @@ async def wait_for_ip(id):
     return ip
 
 
-async def provision_instance(name):
-    new_id = create_instance(name)
+async def provision_instance(name, commercial_type):
+    new_id = create_instance(name, commercial_type)
     start_instance(new_id)
     await wait_for_ready(new_id)
     ip = await wait_for_ip(new_id)

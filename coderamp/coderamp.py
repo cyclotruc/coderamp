@@ -62,9 +62,7 @@ class State(rx.State):
             name = coderamp.name or "None"
             uuid = str(coderamp.uuid) or "None"
             created_at = str(coderamp.created_at) or "None"
-            current_instances = coderamp.current_instances or "None"
-
-            self.coderamps.append([id, name, uuid, created_at, current_instances])
+            self.coderamps.append([id, name, uuid, created_at])
 
 
 class MagicState(rx.State):
@@ -78,12 +76,11 @@ class MagicState(rx.State):
         id = self.router.page.params["id"]
         session_id = self.router.session.session_id
 
-        print(f"Finding instance {id}")
         ramp = Coderamp.select().where(Coderamp.slug == id).first()
         if ramp:
             instance = await ramp.allocate_session(session_id)
             async with self:
-                print(f"Found!! and allocated to {session_id}")
+                print(f"Allocated to {session_id}")
                 self.found = True
                 self.instance_url = instance.public_url
         # TODO handle not ready
@@ -94,16 +91,30 @@ class MagicState(rx.State):
 def new() -> rx.Component:
     id = State.router.page.params["id"]
 
-    instance_url = MagicState.instance_url
-    return rx.vstack(
-        rx.heading(
-            f"Redirecting to {id}",
+    return rx.center(
+        rx.card(
+            rx.vstack(
+                rx.heading(
+                    f"Redirecting to {id}",
+                    size="lg",
+                    color="blue.600",
+                ),
+                rx.cond(
+                    MagicState.found,
+                    rx.fragment(
+                        rx.script(f"window.location.href = '{MagicState.instance_url}'")
+                    ),
+                    rx.spinner(size="xl", color="blue.500"),
+                ),
+                spacing="4",
+                align="center",
+            ),
+            width="auto",
+            padding="6",
+            border_radius="lg",
+            box_shadow="lg",
         ),
-        rx.cond(
-            MagicState.found,
-            rx.fragment(rx.script(f"window.location.href = '{instance_url}'")),
-            rx.spinner(size="3"),
-        ),
+        height="100vh",
     )
 
 
@@ -223,11 +234,13 @@ def index() -> rx.Component:
 async def global_tick():
     try:
         while True:
+            print("[GLOBAL TICK]")
+            for coderamp in Coderamp.select():
+                await coderamp.tick()
             await asyncio.sleep(5)
-            print("global tick")
+
     except asyncio.CancelledError:
-        # clean up if needed
-        print("Task was stopped")
+        print("Global tick was stopped")
 
 
 app = rx.App()
