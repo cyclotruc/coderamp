@@ -26,7 +26,6 @@ class Coderamp(Model):
     uuid = UUIDField(unique=True, default=uuid.uuid4)
     created_at = DateTimeField(default=datetime.now)
     total_instances = IntegerField(default=0)
-    min_instances = IntegerField(default=1)
     max_instances = IntegerField(default=10)
     ready = BooleanField(default=False)
 
@@ -41,6 +40,7 @@ class Coderamp(Model):
     vm_type = CharField(default="DEV1-S")
     open_file = TextField(null=True, default=None)
     open_folder = TextField(null=True, default=None)
+    min_instances = IntegerField(default=1)
     # workspace_folder_name = TextField(null=True, default=None)
 
     class Meta:
@@ -57,6 +57,7 @@ class Coderamp(Model):
         ports="",
         vm_type="DEV1-S",
         timeout=3600,
+        min_instances=1,
     ):
         self.name = name
         self.open_file = open_file
@@ -69,6 +70,7 @@ class Coderamp(Model):
         self.setup_commands = setup_commands
         self.ports = ports
         self.ready = True
+        self.min_instances = min_instances
         self.save()
 
     async def new_instance(self):
@@ -81,6 +83,8 @@ class Coderamp(Model):
                     (Instance.state == "ready") | (Instance.state == "allocated")
                 )
             )
+            self.total_instances += 1
+            self.save()
             return instance
         else:
             raise Exception("Failed to provision Instance: Coderamp not ready")

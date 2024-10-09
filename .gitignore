@@ -12,3 +12,4 @@ assets/external/
 remote_config/caddyfile
 coderamp_venv/
 coderamp/test.py
+coderamp/coderamp_lib/caddy_templates/caddyfile
