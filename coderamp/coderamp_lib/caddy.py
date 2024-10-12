@@ -1,5 +1,5 @@
-from .tools import run, copy_file, write_to_file
-from rxconfig import CADDY_IP
+from .tools import write_to_file
+from rxconfig import CODERAMP_DOMAIN, CADDY_IP, ZERO_SSL_KEY_ID, ZERO_SSL_MAC_KEY
 
 
 def generate_caddyfile(instances):
@@ -7,6 +7,12 @@ def generate_caddyfile(instances):
         "/root/coderamp/coderamp/coderamp_lib/caddy_templates/caddyfile", "r"
     ) as file:
         caddyfile = file.read()
+
+    caddyfile = (
+        caddyfile.replace("{domain}", CODERAMP_DOMAIN)
+        .replace("{key_id}", ZERO_SSL_KEY_ID)
+        .replace("{mac_key}", ZERO_SSL_MAC_KEY)
+    )
 
     with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/web") as file:
         web = file.read()
@@ -17,7 +23,6 @@ def generate_caddyfile(instances):
 
     coderamp_redirects = ""
     for i in instances:
-
         coderamp_redirects += coderamp.replace("{ip}", f"{i.public_ip}").replace(
             "{uuid}", f"{i.uuid}"
         )

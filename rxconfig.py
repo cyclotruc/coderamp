@@ -15,6 +15,8 @@ PG_PASSWORD = os.getenv("PG_PASSWORD")
 CADDY_IP = os.getenv("CADDY_IP")
 
 CODERAMP_DOMAIN = os.getenv("CODERAMP_DOMAIN")
+ZERO_SSL_KEY_ID = os.getenv("ZERO_SSL_KEY_ID")
+ZERO_SSL_MAC_KEY = os.getenv("ZERO_SSL_MAC_KEY")
 
 config = rx.Config(
     app_name="coderamp",

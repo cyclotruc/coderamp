@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from .scaleway import delete_all_codeboxes, provision_instance, terminate_instance
 from .install import setup_coderamp
 from .caddy import update_caddy
-from rxconfig import PG_USER, PG_PASSWORD
+from rxconfig import PG_USER, PG_PASSWORD, CODERAMP_DOMAIN
 
 db = PostgresqlDatabase(
     "coderamp_dev",
@@ -58,7 +58,7 @@ class Coderamp(Model):
         self.open_file = open_file
         self.open_folder = open_folder
         self.slug = name.lower().replace(" ", "-")
-        self.magic_url = f"https://codesandboxdemo.cloud/new/?id={self.slug}"
+        self.magic_url = f"https://{CODERAMP_DOMAIN}/new/?id={self.slug}"
         self.git_url = git_url
         self.vm_type = vm_type
         self.timeout = timeout
