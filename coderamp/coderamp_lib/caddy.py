@@ -1,29 +1,5 @@
-import os
-from dotenv import load_dotenv
-import asyncssh
-
-load_dotenv()
-CADDY_PUBLIC_IP = os.getenv("CADDY_PUBLIC_IP")
-CADDY_USERNAME = os.getenv("CADDY_USERNAME")
-
-
-async def remote_ssh(ip, command):
-    async with asyncssh.connect(ip, username="root", known_hosts=None) as conn:
-        process = await conn.create_process(command)
-        output = ""
-        async for line in process.stdout:
-            output += line
-        await process.wait()
-        return output
-
-
-async def copy_file(ip, local_path, remote_path):
-    async with asyncssh.connect(ip, username="root", known_hosts=None) as conn:
-        await asyncssh.scp(local_path, (conn, remote_path))
-
-
-async def apply_caddyfile():
-    await copy_file(CADDY_PUBLIC_IP, "./Caddyfile", "/root/Caddyfile")
+from .tools import run, copy_file, write_to_file
+from rxconfig import CADDY_IP
 
 
 def generate_caddyfile(instances):
@@ -69,9 +45,6 @@ def generate_caddyfile(instances):
     return caddyfile
 
 
-CADDY_IP = os.getenv("CADDY_IP")
-
-
 async def update_caddy(instances):
-    generate_caddyfile(instances)
-    await apply_caddyfile()
+    caddyfile = generate_caddyfile(instances)
+    await write_to_file(CADDY_IP, caddyfile, "/root/Caddyfile")

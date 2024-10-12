@@ -1,17 +1,13 @@
-import os
 import time
 import requests
 import asyncio
+from rxconfig import (
+    SCW_ACCESS_KEY,
+    SCW_SECRET_KEY,
+    SCW_DEFAULT_ZONE,
+    SCW_DEFAULT_PROJECT_ID,
+)
 
-from dotenv import load_dotenv
-
-
-load_dotenv()
-SCW_ACCESS_KEY = os.getenv("SCW_ACCESS_KEY")
-SCW_SECRET_KEY = os.getenv("SCW_SECRET_KEY")
-SCW_DEFAULT_ORGANIZATION_ID = os.getenv("SCW_DEFAULT_ORGANIZATION_ID")
-SCW_DEFAULT_PROJECT_ID = os.getenv("SCW_DEFAULT_PROJECT_ID")
-SCW_DEFAULT_ZONE = os.getenv("SCW_DEFAULT_ZONE")
 
 headers = {"Content-Type": "application/json", "X-Auth-Token": SCW_SECRET_KEY}
 

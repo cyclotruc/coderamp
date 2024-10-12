@@ -11,7 +11,6 @@ class State(rx.State):
 async def global_tick():
     try:
         while True:
-            print("[GLOBAL TICK]")
             for coderamp in Coderamp.select():
                 await coderamp.tick()
             await asyncio.sleep(5)

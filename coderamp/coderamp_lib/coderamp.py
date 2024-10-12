@@ -1,16 +1,11 @@
-import os
 import uuid
 import asyncio
-from dotenv import load_dotenv
 from peewee import *
 from datetime import datetime, timedelta
 from .scaleway import delete_all_codeboxes, provision_instance, terminate_instance
 from .install import setup_coderamp
 from .caddy import update_caddy
-
-load_dotenv()
-PG_USER = os.getenv("PG_USER")
-PG_PASSWORD = os.getenv("PG_PASSWORD")
+from rxconfig import PG_USER, PG_PASSWORD
 
 db = PostgresqlDatabase(
     "coderamp_dev",
@@ -103,8 +98,25 @@ class Coderamp(Model):
         else:
             raise Exception("No instance available to allocate")
 
-    async def tick(self):
-        print(f"[CODERAMP TICK - {self.slug}]")
+    async def prune_instances(self):
+        old_instances = Instance.select().where(
+            (Instance.coderamp == self.get_id())
+            & (Instance.state != "terminated")
+            & (Instance.created_at < datetime.now() - timedelta(seconds=self.timeout))
+        )
+
+        long_provisioning_instances = Instance.select().where(
+            (Instance.coderamp == self.get_id())
+            & (Instance.state.in_(["created", "provisioned"]))
+            & (Instance.created_at < datetime.now() - timedelta(seconds=600))
+        )
+
+        for instance in old_instances + long_provisioning_instances:
+            print(f"- Terminating old instance: {instance.uuid}")
+            asyncio.create_task(instance.terminate())
+            await asyncio.sleep(0)
+
+    async def reach_min_instances(self):
         ready_instances = (
             Instance.select()
             .where((Instance.coderamp == self.get_id()) & (Instance.state == "ready"))
@@ -121,7 +133,9 @@ class Coderamp(Model):
         )
 
         total_provisioning_instances = ready_instances + provisioning_instances
-        print(f"|Provisioning instances: {total_provisioning_instances}")
+        print(
+            f"|Current instances: {total_provisioning_instances} (r: {ready_instances}, p: {provisioning_instances})"
+        )
 
         if total_provisioning_instances < self.min_instances:
             for _ in range(self.min_instances - total_provisioning_instances):
@@ -129,30 +143,27 @@ class Coderamp(Model):
                 asyncio.create_task(self.new_instance())
                 await asyncio.sleep(0)
 
-        # Delete instances that are too old to survive
-        old_instances = Instance.select().where(
-            (Instance.coderamp == self.get_id())
-            & (Instance.state != "terminated")
-            & (Instance.created_at < datetime.now() - timedelta(seconds=self.timeout))
-        )
-
-        for instance in old_instances:
-            print(f"- Terminating old instance: {instance.uuid}")
-            asyncio.create_task(instance.terminate())
-            await asyncio.sleep(0)
+    async def tick(self):
+        print(f"[CODERAMP TICK - {self.slug}]")
+        await self.prune_instances()
+        await self.reach_min_instances()
+        print("|___________________________")
 
     class Meta:
         database = db
         table_name = "coderamp"
 
-    async def allocate_session(self, session_id):
-        instance = (
+    async def get_ready_instance(self):
+        return (
             Instance.select()
             .where(Instance.coderamp == self.get_id())
             .where(Instance.state == "ready")
             .order_by(Instance.created_at.asc())
             .first()
         )
+
+    async def allocate_session(self, session_id):
+        instance = await self.get_ready_instance()
         if instance:
             instance.allocate(session_id)
             return instance
@@ -184,7 +195,9 @@ class Instance(Model):
     async def setup(self):
         await setup_coderamp(self)
         self.state = "ready"
-        self.public_url = f"https://{self.uuid}.codesandboxbeta.cloud/?folder={self.coderamp.open_folder}"
+        self.public_url = (
+            f"https://{self.uuid}.{CODERAMP_DOMAIN}/?folder={self.coderamp.open_folder}"
+        )
         self.save()
 
     def allocate(self, session_id):

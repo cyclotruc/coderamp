@@ -9,12 +9,10 @@ class InstanceTableState(rx.State):
         self.instances = []
         all_instances = Instance.select()
         for instance in all_instances:
-            print(instance)
             id = instance.id or "None"
             name = instance.name or "None"
             state = instance.state or "None"
             public_ip = instance.public_ip or "None"
-
             self.instances.append([id, name, state, public_ip])
 
 

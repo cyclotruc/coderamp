@@ -1,5 +1,7 @@
 import reflex as rx
+
 from ..coderamp_lib.coderamp import Coderamp
+from rxconfig import CODERAMP_DOMAIN
 
 
 class DemoState(rx.State):
@@ -84,7 +86,7 @@ def demo() -> rx.Component:
                     rx.button(
                         "Open Evidence",
                         on_click=rx.redirect(
-                            "https://codesandboxbeta.cloud/new?id=evidence_demo"
+                            f"https://{CODERAMP_DOMAIN}/new?id=evidence_demo"
                         ),
                     ),
                 ),

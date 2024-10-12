@@ -6,4 +6,6 @@ __all__ = [
     "coderamp_table",
     "create_form",
     "instance_table",
+    "CoderampTableState",
+    "InstanceTableState",
 ]
