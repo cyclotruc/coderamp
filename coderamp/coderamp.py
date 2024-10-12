@@ -10,10 +10,13 @@ class State(rx.State):
 
 async def global_tick():
     try:
+        print("Global tick started")
         while True:
             for coderamp in Coderamp.select():
                 await coderamp.tick()
-            await asyncio.sleep(5)
+
+            # input()
+            await asyncio.sleep(10)
 
     except asyncio.CancelledError:
         print("Global tick was stopped")

@@ -101,53 +101,48 @@ class Coderamp(Model):
     async def prune_instances(self):
         old_instances = Instance.select().where(
             (Instance.coderamp == self.get_id())
-            & (Instance.state != "terminated")
+            & (Instance.state != "retired")
             & (Instance.created_at < datetime.now() - timedelta(seconds=self.timeout))
         )
 
         long_provisioning_instances = Instance.select().where(
             (Instance.coderamp == self.get_id())
-            & (Instance.state.in_(["created", "provisioned"]))
+            & (Instance.state.in_(["created", "provisioning"]))
             & (Instance.created_at < datetime.now() - timedelta(seconds=600))
         )
 
         for instance in old_instances + long_provisioning_instances:
-            print(f"- Terminating old instance: {instance.uuid}")
-            asyncio.create_task(instance.terminate())
+            print(f"| - Terminating old instance: {instance.uuid}")
+            asyncio.create_task(instance.retire())
             await asyncio.sleep(0)
 
     async def reach_min_instances(self):
-        ready_instances = (
-            Instance.select()
-            .where((Instance.coderamp == self.get_id()) & (Instance.state == "ready"))
-            .count()
-        )
-
-        provisioning_instances = (
-            Instance.select()
-            .where(
-                (Instance.coderamp == self.get_id())
-                & (Instance.state.in_(["created", "provisioned"]))
+        res = Instance.select().where(
+            (Instance.coderamp == self.get_id())
+            & (
+                (Instance.state == "created")
+                | (Instance.state == "provisioning")
+                | (Instance.state == "provisioned")
+                | (Instance.state == "installing")
+                | (Instance.state == "ready")
             )
-            .count()
         )
 
-        total_provisioning_instances = ready_instances + provisioning_instances
-        print(
-            f"|Current instances: {total_provisioning_instances} (r: {ready_instances}, p: {provisioning_instances})"
-        )
+        instances_getting_up = len(res)
+        print(f"| Instances getting up: {instances_getting_up}")
 
-        if total_provisioning_instances < self.min_instances:
-            for _ in range(self.min_instances - total_provisioning_instances):
-                print(f"+ Provisioning new instance to reach {self.min_instances}")
+        if instances_getting_up < self.min_instances:
+            for _ in range(self.min_instances - instances_getting_up):
+                print(f"| + Provisioning new instance to reach {self.min_instances}")
                 asyncio.create_task(self.new_instance())
                 await asyncio.sleep(0)
 
     async def tick(self):
-        print(f"[CODERAMP TICK - {self.slug}]")
+        print("______________________________")
+        print(f"|CODERAMP TICK - {self.slug}")
         await self.prune_instances()
         await self.reach_min_instances()
-        print("|___________________________")
+        print("|_____________________________\n")
 
     class Meta:
         database = db
@@ -171,6 +166,19 @@ class Coderamp(Model):
             raise Exception("No instance available to allocate")
 
 
+instance_states = [
+    "created",
+    "provisioning",
+    "provisioned",
+    "installing",
+    ###########@
+    "ready",
+    "allocated",
+    ############
+    "retired",
+]
+
+
 class Instance(Model):
     uuid = UUIDField(unique=True, default=uuid.uuid4)
     name = CharField()
@@ -184,6 +192,8 @@ class Instance(Model):
     allocated_at = DateTimeField(null=True, default=None)
 
     async def provision(self):
+        self.state = "provisioning"
+        self.save()
         id, ip = await provision_instance(
             f"{self.coderamp.slug}-{self.uuid}", self.coderamp.vm_type
         )
@@ -193,6 +203,9 @@ class Instance(Model):
         self.save()
 
     async def setup(self):
+        self.state = "installing"
+        self.save()
+
         await setup_coderamp(self)
         self.state = "ready"
         self.public_url = (
@@ -206,11 +219,11 @@ class Instance(Model):
         self.state = "allocated"
         self.save()
 
-    async def terminate(self):
+    async def retire(self):
         terminate_instance(self.remote_id)
         self.public_ip = None
         self.allocated_to_session_id = None
-        self.state = "terminated"
+        self.state = "retired"
         self.save()
 
     class Meta:

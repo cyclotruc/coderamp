@@ -23,8 +23,10 @@ def generate_caddyfile(instances):
 
     coderamp_redirects = ""
     for i in instances:
-        coderamp_redirects += coderamp.replace("{ip}", f"{i.public_ip}").replace(
-            "{uuid}", f"{i.uuid}"
+        coderamp_redirects += (
+            coderamp.replace("{ip}", f"{i.public_ip}")
+            .replace("{uuid}", f"{i.uuid}")
+            .replace("{domain}", CODERAMP_DOMAIN)
         )
         coderamp_redirects += "\n"
 
