@@ -45,10 +45,14 @@ async def setup_user_demo(ip, repo_url, setup_commands):
 
 async def setup_vscode(ip, open_file, open_folder):
     await run(ip, "mkdir /coderamp/.vscode")
-    await copy_file(
+    with open(
+        "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/settings.json"
+    ) as file:
+        content = file.read()
+    await write_to_file(
         ip,
-        "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/settings.json",
-        f"{open_folder}/.vscode/settings.json",
+        content,
+        f"/root/.local/share/code-server/User/settings.json",
     )
     with open(
         "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/tasks.json"
