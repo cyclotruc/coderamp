@@ -46,15 +46,10 @@ def terminate_instance(id):
     }
 
     response = requests.post(url, json=data, headers=headers)
-    if response.status_code == 202:
-        print(f"Stopped instance: {id}")
-    else:
-        print(
-            f"Failed to stop instance {id}, {response.status_code}: {response.json()}"
-        )
+    return response.status_code == 202
 
 
-def create_instance(name, commercial_type):
+def create_instance(name, commercial_type, uuid):
     url = f"https://api.scaleway.com/instance/v1/zones/{SCW_DEFAULT_ZONE}/servers"
 
     data = {
@@ -62,7 +57,8 @@ def create_instance(name, commercial_type):
         "image": "77f47c21-772d-4c10-ac97-f5949447df66",
         "name": name,
         "tags": [
-            "codebox",
+            "coderamp",
+            uuid,
         ],
         "project": SCW_DEFAULT_PROJECT_ID,
         "routed_ip_enabled": True,
@@ -74,6 +70,15 @@ def create_instance(name, commercial_type):
         return response.json()["server"]["id"]
     else:
         print(f"Failed to create instance: \n{data}")
+
+
+def get_by_uuid(uuid):
+    url = f"https://api.scaleway.com/instance/v1/zones/{SCW_DEFAULT_ZONE}/servers"
+    response = requests.get(url, params={"tags": uuid}, headers=headers)
+    if response.status_code == 200 and len(response.json()["servers"]):
+        return response.json()["servers"][0]["id"]
+    else:
+        return None
 
 
 def list_instances():
@@ -138,8 +143,8 @@ async def wait_for_ip(id):
     return ip
 
 
-async def provision_instance(name, commercial_type):
-    new_id = create_instance(name, commercial_type)
+async def provision_instance(name, commercial_type, uuid):
+    new_id = create_instance(name, commercial_type, uuid)
     start_instance(new_id)
     await wait_for_ready(new_id)
     ip = await wait_for_ip(new_id)
