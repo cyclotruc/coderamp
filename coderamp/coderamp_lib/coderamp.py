@@ -2,7 +2,12 @@ import uuid
 import asyncio
 from peewee import *
 from datetime import datetime, timedelta
-from .scaleway import delete_all_codeboxes, provision_instance, terminate_instance
+from .scaleway import (
+    delete_all_codeboxes,
+    provision_instance,
+    terminate_instance,
+    get_by_uuid,
+)
 from .install import setup_coderamp
 from .caddy import update_caddy
 from rxconfig import PG_USER, PG_PASSWORD, CODERAMP_DOMAIN
@@ -23,6 +28,7 @@ class Coderamp(Model):
     total_instances = IntegerField(default=0)
     max_instances = IntegerField(default=10)
     ready = BooleanField(default=False)
+    active = BooleanField(default=False)
 
     # User-input defined variables, they are set in configure:
     name = TextField(null=True, default=None)
@@ -36,7 +42,7 @@ class Coderamp(Model):
     open_file = TextField(null=True, default=None)
     open_folder = TextField(null=True, default=None)
     min_instances = IntegerField(default=1)
-    # workspace_folder_name = TextField(null=True, default=None)
+    
 
     class Meta:
         database = db
@@ -66,6 +72,17 @@ class Coderamp(Model):
         self.ports = ports
         self.ready = True
         self.min_instances = min_instances
+        self.active = True
+        self.save()
+
+    def start(self):
+        print(f"Starting coderamp: {self.slug}")
+        self.active = True
+        self.save()
+
+    def stop(self):
+        print(f"Stopping coderamp: {self.slug}")
+        self.active = False
         self.save()
 
     async def new_instance(self):
@@ -99,10 +116,10 @@ class Coderamp(Model):
             raise Exception("No instance available to allocate")
 
     async def prune_instances(self):
-        old_instances = Instance.select().where(
+        timeout_allocated_instances = Instance.select().where(
             (Instance.coderamp == self.get_id())
-            & (Instance.state != "retired")
-            & (Instance.created_at < datetime.now() - timedelta(seconds=self.timeout))
+            & (Instance.state == "allocated")
+            & (Instance.allocated_at < datetime.now() - timedelta(seconds=self.timeout))
         )
 
         long_provisioning_instances = Instance.select().where(
@@ -111,7 +128,7 @@ class Coderamp(Model):
             & (Instance.created_at < datetime.now() - timedelta(seconds=600))
         )
 
-        for instance in old_instances + long_provisioning_instances:
+        for instance in timeout_allocated_instances + long_provisioning_instances:
             print(f"| - Terminating old instance: {instance.uuid}")
             asyncio.create_task(instance.retire())
             await asyncio.sleep(0)
@@ -190,12 +207,13 @@ class Instance(Model):
     coderamp = ForeignKeyField(Coderamp, backref="instances")
     allocated_to_session_id = CharField(null=True, default=None)
     allocated_at = DateTimeField(null=True, default=None)
+    last_healthcheck_at = DateTimeField(null=True, default=None)
 
     async def provision(self):
         self.state = "provisioning"
         self.save()
         id, ip = await provision_instance(
-            f"{self.coderamp.slug}-{self.uuid}", self.coderamp.vm_type
+            f"{self.coderamp.slug}-{self.uuid}", self.coderamp.vm_type, str(self.uuid)
         )
         self.remote_id = id
         self.public_ip = ip
@@ -220,11 +238,17 @@ class Instance(Model):
         self.save()
 
     async def retire(self):
-        terminate_instance(self.remote_id)
-        self.public_ip = None
+        if terminate_instance(self.remote_id):
+            self.remote_id = None
+            self.public_ip = None
+        else:
+            print(f"Failed to retire instance: {self.uuid}")
         self.allocated_to_session_id = None
         self.state = "retired"
         self.save()
+
+    async def delete(self):
+        self.delete_instance()
 
     class Meta:
         database = db
