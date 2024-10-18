@@ -20,6 +20,18 @@ db = PostgresqlDatabase(
     port=5432,
 )
 
+def generate_slug(name: str):
+    slug = name.lower().replace(" ", "-")
+    
+    sufix = 0
+    while Coderamp.select().where(Coderamp.slug == slug).first():
+        slug = f"{slug}-{sufix}"
+        sufix += 1
+    
+    return slug
+
+
+
 
 class Coderamp(Model):
 
@@ -63,7 +75,7 @@ class Coderamp(Model):
         self.name = name
         self.open_file = open_file
         self.open_folder = open_folder
-        self.slug = name.lower().replace(" ", "-")
+        self.slug = generate_slug(name)
         self.magic_url = f"https://{CODERAMP_DOMAIN}/new/?id={self.slug}"
         self.git_url = git_url
         self.vm_type = vm_type
@@ -165,22 +177,19 @@ class Coderamp(Model):
         database = db
         table_name = "coderamp"
 
-    async def get_ready_instance(self):
-        return (
+    async def allocate_session(self, session_id):
+        instance = (
             Instance.select()
             .where(Instance.coderamp == self.get_id())
             .where(Instance.state == "ready")
             .order_by(Instance.created_at.asc())
             .first()
         )
-
-    async def allocate_session(self, session_id):
-        instance = await self.get_ready_instance()
         if instance:
             instance.allocate(session_id)
             return instance
         else:
-            raise Exception("No instance available to allocate")
+            return None
 
 
 instance_states = [
