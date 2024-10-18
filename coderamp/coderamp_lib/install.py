@@ -5,8 +5,6 @@ from rxconfig import CODERAMP_DOMAIN
 async def setup_os(ip):
     await run(ip, "apt-get update")
     await run(ip, "apt-get install -y zsh")
-    await run(ip, "apt-get install -y python3-pip")
-    await run(ip, "mkdir /coderamp")
     await run(
         ip,
         'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"',
@@ -35,16 +33,18 @@ async def setup_code_server(ip, domain):
     await run(ip, "sudo systemctl enable --now code-server@root")
 
 
-async def setup_user_demo(ip, repo_url, setup_commands):
+async def setup_user_demo(ip, repo_url, setup_commands, open_folder):
+    await run(ip, f"mkdir {open_folder}")
     if repo_url:
-        cmd = f"git clone {repo_url} /coderamp"
+        cmd = f"git clone {repo_url} {open_folder}"
         await run(ip, cmd)
-    for command in setup_commands.split("\n"):
-        await run(ip, command)
+    if setup_commands:
+        for command in setup_commands.split("\n"):
+            await run(ip, command)
 
 
 async def setup_vscode(ip, open_file, open_folder):
-    await run(ip, "mkdir /coderamp/.vscode")
+    await run(ip, "mkdir -p /root/.local/share/code-server/User/")
     with open(
         "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/settings.json"
     ) as file:
@@ -54,6 +54,7 @@ async def setup_vscode(ip, open_file, open_folder):
         content,
         f"/root/.local/share/code-server/User/settings.json",
     )
+    await run(ip, f"mkdir -p {open_folder}/.vscode")
     with open(
         "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/tasks.json"
     ) as file:
@@ -75,7 +76,10 @@ async def setup_coderamp(instance):
     )
     print("USER SETUPWITH ", instance.coderamp.setup_commands)
     await setup_user_demo(
-        instance.public_ip, instance.coderamp.git_url, instance.coderamp.setup_commands
+        instance.public_ip,
+        instance.coderamp.git_url,
+        instance.coderamp.setup_commands,
+        instance.coderamp.open_folder,
     )
     await setup_vscode(
         instance.public_ip, instance.coderamp.open_file, instance.coderamp.open_folder
