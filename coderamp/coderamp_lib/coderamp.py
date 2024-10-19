@@ -1,5 +1,8 @@
 import uuid
 import asyncio
+import re
+import requests
+
 from peewee import *
 from datetime import datetime, timedelta
 from .scaleway import (
@@ -21,12 +24,19 @@ db = PostgresqlDatabase(
 )
 
 def generate_slug(name: str):
+    # Convert to lowercase and replace spaces with hyphens
     slug = name.lower().replace(" ", "-")
+    # Remove any characters that are not alphanumeric, hyphen, or underscore
+    slug = re.sub(r'[^a-z0-9-_]', '', slug)
+    # Replace multiple consecutive hyphens with a single hyphen
+    slug = re.sub(r'-+', '-', slug)
+    # Remove leading and trailing hyphens
+    slug = slug.strip('-')
     
-    sufix = 0
+    suffix = 0
     while Coderamp.select().where(Coderamp.slug == slug).first():
-        slug = f"{slug}-{sufix}"
-        sufix += 1
+        suffix += 1
+        slug = f"{slug}-{suffix}"
     
     return slug
 
@@ -102,11 +112,6 @@ class Coderamp(Model):
             instance = Instance.create(name=self.name, state="created", coderamp=self)
             await instance.provision()
             await instance.setup()
-            await update_caddy(
-                Instance.select().where(
-                    (Instance.state == "ready") | (Instance.state == "allocated")
-                )
-            )
             self.total_instances += 1
             self.save()
             return instance
@@ -229,15 +234,34 @@ class Instance(Model):
         self.state = "provisioned"
         self.save()
 
+    async def wait_for_reverse_proxy(self, url):
+        ready = False
+        while not ready:
+            try:
+                requests.get(url)
+                ready = True
+            except requests.exceptions.SSLError:
+                print(f"Waiting for {url} to be ready")
+                await asyncio.sleep(1)
+
+
+        
+
     async def setup(self):
         self.state = "installing"
         self.save()
-
-        await setup_coderamp(self)
-        self.state = "ready"
+        await update_caddy(
+                Instance.select().where(
+                    (Instance.state == "ready") | (Instance.state == "allocated") | (Instance.state == "installing")
+                )
+            )
         self.public_url = (
             f"https://{self.uuid}.{CODERAMP_DOMAIN}/?folder={self.coderamp.open_folder}"
         )
+        await setup_coderamp(self)
+        
+        await self.wait_for_reverse_proxy(self.public_url)
+        self.state = "ready"
         self.save()
 
     def allocate(self, session_id):
