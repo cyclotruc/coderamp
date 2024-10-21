@@ -1,17 +1,23 @@
 import reflex as rx
 from datetime import timedelta
 from ..coderamp_lib.coderamp import Instance
-from reflex.utils.prerequisites import get_app
 import asyncio
+from reflex.utils.prerequisites import get_app
 
 
 class InstanceTableState(rx.State):
     instances: list[dict] = []
     update: bool = False
     time: int = 0
+    is_autorefreshing: bool = False
 
     def load_entries(self):
-        instances = Instance.select().order_by(Instance.created_at.desc()).limit(10)
+        instances = (
+            Instance.select()
+            .where(Instance.state != "retired")
+            .order_by(Instance.created_at.desc())
+            .limit(10)
+        )
         updated_instances = []
         for instance in instances:
             updated_instances.append(
@@ -30,16 +36,6 @@ class InstanceTableState(rx.State):
         self.time += 1
         self.instances = updated_instances
 
-    @rx.background
-    async def autorefresh_handler(self):
-        print("Autorefresh handler started")
-        app_object = get_app()
-        while self.router.session.client_token in app_object.app.event_namespace.token_to_sid:
-            async with self:
-                self.load_entries()
-            await asyncio.sleep(1)
-        print("Autorefresh handler stopped")
-
     async def retire_handler(self, id: int):
         instance = Instance.get_by_id(id)
         await instance.retire()
@@ -52,6 +48,27 @@ class InstanceTableState(rx.State):
         else:
             raise ValueError("Instance is not retired")
         self.load_entries()
+
+    @rx.background
+    async def start_autorefresh(self):
+        async with self:
+            self.is_autorefreshing = True
+        app_object = get_app()
+        while self.is_autorefreshing:
+            async with self:
+                self.load_entries()
+            yield
+            await asyncio.sleep(1)
+            client_still_connected = (
+                self.router.session.client_token
+                in app_object.app.event_namespace.token_to_sid
+            )
+            if not client_still_connected:
+                async with self:
+                    self.is_autorefreshing = False
+
+    def stop_autorefresh(self):
+        self.is_autorefreshing = False
 
 
 def instance_row(instance: dict) -> rx.Component:
@@ -154,7 +171,6 @@ def instance_row(instance: dict) -> rx.Component:
             ),
         ),
         align_items="center",  # Add this line to center items vertically
-        on_mount=InstanceTableState.autorefresh_handler,
     )
 
 
@@ -163,32 +179,34 @@ def instance_table() -> rx.Component:
         rx.card(
             rx.vstack(
                 rx.text(InstanceTableState.time),
-            rx.table.root(
-                rx.table.header(
-                    rx.table.row(
-                        rx.table.column_header_cell("Name"),
-                        rx.table.column_header_cell("Age"),
-                        rx.table.column_header_cell(""),
-                        rx.table.column_header_cell(""),
-                        rx.table.column_header_cell("State"),
-                        rx.table.column_header_cell("ip"),
-                        rx.table.column_header_cell("ports"),
-                        rx.table.column_header_cell(
-                            rx.button(
-                                "Refresh", on_click=InstanceTableState.load_entries
-                            )
+                rx.table.root(
+                    rx.table.header(
+                        rx.table.row(
+                            rx.table.column_header_cell("Name"),
+                            rx.table.column_header_cell("Age"),
+                            rx.table.column_header_cell(""),
+                            rx.table.column_header_cell(""),
+                            rx.table.column_header_cell("State"),
+                            rx.table.column_header_cell("ip"),
+                            rx.table.column_header_cell("ports"),
+                            rx.table.column_header_cell(
+                                rx.button(
+                                    "Refresh", on_click=InstanceTableState.load_entries
+                                )
+                            ),
+                            # rx.table.column_header_cell(
+                            #     rx.button(
+                            #         "Auto-refresh",
+                            #         on_click=InstanceTableState.autorefresh_handler,
+                            #     )
+                            # ),
                         ),
-                        # rx.table.column_header_cell(
-                        #     rx.button(
-                        #         "Auto-refresh",
-                        #         on_click=InstanceTableState.autorefresh_handler,
-                        #     )
-                        # ),
                     ),
+                    rx.table.body(
+                        rx.foreach(InstanceTableState.instances, instance_row)
+                    ),
+                    on_mount=InstanceTableState.start_autorefresh,
                 ),
-                rx.table.body(rx.foreach(InstanceTableState.instances, instance_row)),
-                on_mount=InstanceTableState.load_entries,
-            )
-            )
+            ),
         )
     )
