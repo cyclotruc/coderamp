@@ -9,10 +9,9 @@ from .scaleway import (
     delete_all_codeboxes,
     provision_instance,
     terminate_instance,
-    get_by_uuid,
 )
 from .install import setup_coderamp
-from .caddy import update_caddy
+from .caddy import update_coderamp_caddyfile
 from rxconfig import PG_USER, PG_PASSWORD, CODERAMP_DOMAIN
 
 db = PostgresqlDatabase(
@@ -23,24 +22,23 @@ db = PostgresqlDatabase(
     port=5432,
 )
 
+
 def generate_slug(name: str):
     # Convert to lowercase and replace spaces with hyphens
     slug = name.lower().replace(" ", "-")
     # Remove any characters that are not alphanumeric, hyphen, or underscore
-    slug = re.sub(r'[^a-z0-9-_]', '', slug)
+    slug = re.sub(r"[^a-z0-9-_]", "", slug)
     # Replace multiple consecutive hyphens with a single hyphen
-    slug = re.sub(r'-+', '-', slug)
+    slug = re.sub(r"-+", "-", slug)
     # Remove leading and trailing hyphens
-    slug = slug.strip('-')
-    
+    slug = slug.strip("-")
+
     suffix = 0
     while Coderamp.select().where(Coderamp.slug == slug).first():
         suffix += 1
         slug = f"{slug}-{suffix}"
-    
+
     return slug
-
-
 
 
 class Coderamp(Model):
@@ -64,7 +62,6 @@ class Coderamp(Model):
     open_file = TextField(null=True, default=None)
     open_folder = TextField(null=True, default=None)
     min_instances = IntegerField(default=1)
-    
 
     class Meta:
         database = db
@@ -244,22 +241,17 @@ class Instance(Model):
                 print(f"Waiting for {url} to be ready")
                 await asyncio.sleep(1)
 
-
-        
-
     async def setup(self):
         self.state = "installing"
         self.save()
-        await update_caddy(
-                Instance.select().where(
-                    (Instance.state == "ready") | (Instance.state == "allocated") | (Instance.state == "installing")
-                )
-            )
+        await update_coderamp_caddyfile(
+            Instance.select().where(Instance.state != "retired")
+        )
         self.public_url = (
             f"https://{self.uuid}.{CODERAMP_DOMAIN}/?folder={self.coderamp.open_folder}"
         )
         await setup_coderamp(self)
-        
+
         await self.wait_for_reverse_proxy(self.public_url)
         self.state = "ready"
         self.save()

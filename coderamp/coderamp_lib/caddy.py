@@ -1,11 +1,16 @@
 from .tools import write_to_file
-from rxconfig import CODERAMP_DOMAIN, CADDY_IP, ZERO_SSL_KEY_ID, ZERO_SSL_MAC_KEY
+from rxconfig import (
+    CODERAMP_DOMAIN,
+    MAIN_CADDY_IP,
+    CODERAMP_CADDY_IP,
+    ZERO_SSL_KEY_ID,
+    ZERO_SSL_MAC_KEY,
+)
 
 
-def generate_caddyfile(instances):
-    with open(
-        "/root/coderamp/coderamp/coderamp_lib/caddy_templates/caddyfile", "r"
-    ) as file:
+def generate_main_caddyfile():
+    caddyfile = ""
+    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/main", "r") as file:
         caddyfile = file.read()
 
     caddyfile = (
@@ -17,7 +22,11 @@ def generate_caddyfile(instances):
     with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/web") as file:
         web = file.read()
     caddyfile = caddyfile.replace("{web}", web)
+    return caddyfile
 
+
+def generate_coderamp_caddyfile(instances):
+    caddyfile = "{coderamps}\n{ports}"
     with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp") as file:
         coderamp = file.read()
 
@@ -32,7 +41,7 @@ def generate_caddyfile(instances):
 
     caddyfile = caddyfile.replace("{coderamps}", coderamp_redirects)
 
-    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/ports") as file:
+    with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/port") as file:
         ports = file.read()
 
     ports_redirects = ""
@@ -43,6 +52,7 @@ def generate_caddyfile(instances):
                     ports.replace("{port}", port)
                     .replace("{ip}", i.public_ip)
                     .replace("{uuid}", f"{i.uuid}")
+                    .replace("{domain}", CODERAMP_DOMAIN)
                 )
                 ports_redirects += "\n"
     caddyfile = caddyfile.replace("{ports}", ports_redirects)
@@ -52,6 +62,12 @@ def generate_caddyfile(instances):
     return caddyfile
 
 
-async def update_caddy(instances):
-    caddyfile = generate_caddyfile(instances)
-    await write_to_file(CADDY_IP, caddyfile, "/root/Caddyfile")
+async def update_main_caddyfile():
+    caddyfile = generate_main_caddyfile()
+    await write_to_file(MAIN_CADDY_IP, caddyfile, "/root/Caddyfile")
+
+
+async def update_coderamp_caddyfile(instances):
+    print("Updating coderamp caddyfile")
+    caddyfile = generate_coderamp_caddyfile(instances)
+    await write_to_file(CODERAMP_CADDY_IP, caddyfile, "/root/Caddyfile")

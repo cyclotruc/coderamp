@@ -1,12 +1,12 @@
+import asyncio
+
+
 import reflex as rx
+
 from ..components import (
     instance_table,
     coderamp_table,
 )
-
-
-class DashboardState(rx.State):
-    pass
 
 
 @rx.page(route="/dashboard")

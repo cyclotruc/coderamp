@@ -1,4 +1,4 @@
-{uuid}.{domain} {
+http://{uuid}.{domain} {
  handle /* {
     reverse_proxy {ip}:8080
   }
