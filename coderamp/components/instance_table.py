@@ -1,8 +1,9 @@
+import asyncio
+
 import reflex as rx
+from reflex.utils.prerequisites import get_app
 from datetime import timedelta
 from ..coderamp_lib.coderamp import Instance
-import asyncio
-from reflex.utils.prerequisites import get_app
 
 
 class InstanceTableState(rx.State):
@@ -10,6 +11,12 @@ class InstanceTableState(rx.State):
     update: bool = False
     time: int = 0
     is_autorefreshing: bool = False
+    ascii_loader: str = ""
+
+    def get_ascii_loader(self, time: int):
+        loader = ["𓃉𓃉𓃉", "𓃉𓃉∘", "𓃉∘°", "∘°∘", "°∘𓃉", "∘𓃉𓃉"]
+        # loader = ["◰", "◳", "◲", "◱"]
+        return loader[time % len(loader)]
 
     def load_entries(self):
         instances = (
@@ -34,6 +41,7 @@ class InstanceTableState(rx.State):
                 }
             )
         self.time += 1
+        self.ascii_loader = self.get_ascii_loader(self.time)
         self.instances = updated_instances
 
     async def retire_handler(self, id: int):
@@ -66,9 +74,6 @@ class InstanceTableState(rx.State):
             if not client_still_connected:
                 async with self:
                     self.is_autorefreshing = False
-
-    def stop_autorefresh(self):
-        self.is_autorefreshing = False
 
 
 def instance_row(instance: dict) -> rx.Component:
@@ -178,7 +183,7 @@ def instance_table() -> rx.Component:
     return rx.center(
         rx.card(
             rx.vstack(
-                rx.text(InstanceTableState.time),
+                rx.text(InstanceTableState.ascii_loader),
                 rx.table.root(
                     rx.table.header(
                         rx.table.row(

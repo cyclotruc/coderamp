@@ -1,4 +1,7 @@
+import asyncio
+
 import reflex as rx
+from reflex.utils.prerequisites import get_app
 from datetime import datetime, timedelta
 from ..coderamp_lib.coderamp import Coderamp
 
@@ -6,6 +9,13 @@ from ..coderamp_lib.coderamp import Coderamp
 class CoderampTableState(rx.State):
     coderamps: list[dict] = []
     update: bool = False
+    time: int = 0
+    is_autorefreshing: bool = False
+    ascii_loader: str = ""
+
+    def get_ascii_loader(self, time: int):
+        loader = ["𓃉𓃉𓃉", "𓃉𓃉∘", "𓃉∘°", "∘°∘", "°∘𓃉", "∘𓃉𓃉"]
+        return loader[time % len(loader)]
 
     def load_entries(self):
         coderamps = Coderamp.select().order_by(Coderamp.created_at.desc()).limit(10)
@@ -21,17 +31,43 @@ class CoderampTableState(rx.State):
                     "magic_link": coderamp.magic_url,
                 }
             )
+        self.time += 1
+        self.ascii_loader = self.get_ascii_loader(self.time)
         self.coderamps = updated_coderamps
+
+    @rx.background
+    async def start_autorefresh(self):
+        async with self:
+            self.is_autorefreshing = True
+        app_object = get_app()
+        while self.is_autorefreshing:
+            async with self:
+                self.load_entries()
+            yield
+            await asyncio.sleep(1)
+            client_still_connected = (
+                self.router.session.client_token
+                in app_object.app.event_namespace.token_to_sid
+            )
+            if not client_still_connected:
+                async with self:
+                    self.is_autorefreshing = False
 
     async def stop_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
-        await coderamp.stop()
-        self.load_entries()
+        if coderamp:
+            await coderamp.stop()
+            self.load_entries()
+        else:
+            raise Exception("Coderamp not found")
 
     async def start_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
-        await coderamp.start()
-        self.load_entries()
+        if coderamp:
+            await coderamp.start()
+            self.load_entries()
+        else:
+            raise Exception("Coderamp not found")
 
     async def delete_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
@@ -89,24 +125,29 @@ def coderamp_row(coderamp: dict) -> rx.Component:
 def coderamp_table() -> rx.Component:
     return rx.center(
         rx.card(
-            rx.table.root(
-                rx.table.header(
-                    rx.table.row(
-                        rx.table.column_header_cell("name"),
-                        rx.table.column_header_cell("age"),
-                        rx.table.column_header_cell("vm_type"),
-                        rx.table.column_header_cell("magic_link"),
-                        rx.table.column_header_cell("start_button"),
-                        rx.table.column_header_cell("stop_button"),
-                        rx.table.column_header_cell(
-                            rx.button(
-                                "Refresh", on_click=CoderampTableState.load_entries
-                            )
+            rx.vstack(
+                rx.text(CoderampTableState.ascii_loader),
+                rx.table.root(
+                    rx.table.header(
+                        rx.table.row(
+                            rx.table.column_header_cell("name"),
+                            rx.table.column_header_cell("age"),
+                            rx.table.column_header_cell("vm_type"),
+                            rx.table.column_header_cell("magic_link"),
+                            rx.table.column_header_cell("start_button"),
+                            rx.table.column_header_cell("stop_button"),
+                            rx.table.column_header_cell(
+                                rx.button(
+                                    "Refresh", on_click=CoderampTableState.load_entries
+                                )
+                            ),
                         ),
                     ),
+                    rx.table.body(
+                        rx.foreach(CoderampTableState.coderamps, coderamp_row)
+                    ),
+                    on_mount=CoderampTableState.start_autorefresh,
                 ),
-                rx.table.body(rx.foreach(CoderampTableState.coderamps, coderamp_row)),
-                on_mount=CoderampTableState.load_entries,
             )
         )
     )
