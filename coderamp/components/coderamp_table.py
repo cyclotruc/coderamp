@@ -28,7 +28,8 @@ class CoderampTableState(rx.State):
                     "age": coderamp.created_at + timedelta(hours=2),
                     "active": coderamp.active,
                     "vm_type": coderamp.vm_type,
-                    "magic_link": coderamp.magic_url,
+                    "magic_link": coderamp.magic_url or "",
+                    "ports": coderamp.ports or "",
                 }
             )
         self.time += 1
@@ -56,23 +57,25 @@ class CoderampTableState(rx.State):
     async def stop_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
         if coderamp:
-            await coderamp.stop()
-            self.load_entries()
+            coderamp.stop()
         else:
             raise Exception("Coderamp not found")
 
     async def start_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
         if coderamp:
-            await coderamp.start()
-            self.load_entries()
+            coderamp.start()
         else:
             raise Exception("Coderamp not found")
 
     async def delete_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
-        await coderamp.delete_coderamp()
-        self.load_entries()
+        if coderamp:
+            print(f"Deleting coderamp: {coderamp.uuid}")
+            print(f"Coderamp dir {dir(coderamp)}")
+            await coderamp.delete_from_db()
+        else:
+            raise Exception("Coderamp not found")
 
 
 def coderamp_row(coderamp: dict) -> rx.Component:
@@ -91,33 +94,34 @@ def coderamp_row(coderamp: dict) -> rx.Component:
             ),
         ),
         rx.table.cell(
-            rx.hstack(
-                rx.cond(
-                    coderamp["active"],
-                    rx.button(
-                        "Stop",
-                        on_click=lambda: CoderampTableState.stop_handler(
-                            coderamp["id"]
-                        ),
-                        color_scheme="gray",
-                    ),
-                    rx.button(
-                        "Start",
-                        on_click=lambda: CoderampTableState.start_handler(
-                            coderamp["id"]
-                        ),
-                        color_scheme="green",
-                    ),
+            rx.cond(
+                coderamp["active"],
+                rx.button(
+                    "Stop",
+                    on_click=lambda: CoderampTableState.stop_handler(coderamp["id"]),
+                    color_scheme="gray",
+                ),
+                rx.button(
+                    "Start",
+                    on_click=lambda: CoderampTableState.start_handler(coderamp["id"]),
+                    color_scheme="green",
                 ),
             ),
         ),
-        rx.table.cell(coderamp["ip"]),
         rx.table.cell(
             rx.link(
                 f"{coderamp['magic_link'].to(str)}",
                 href=coderamp["magic_link"].to(str),
                 target="_blank",
             )
+        ),
+        rx.table.cell(rx.badge(coderamp["ports"])),
+        rx.table.cell(
+            rx.button(
+                "Delete",
+                on_click=lambda: CoderampTableState.delete_handler(coderamp["id"]),
+                color_scheme="red",
+            ),
         ),
     )
 
@@ -130,12 +134,13 @@ def coderamp_table() -> rx.Component:
                 rx.table.root(
                     rx.table.header(
                         rx.table.row(
-                            rx.table.column_header_cell("name"),
-                            rx.table.column_header_cell("age"),
-                            rx.table.column_header_cell("vm_type"),
-                            rx.table.column_header_cell("magic_link"),
-                            rx.table.column_header_cell("start_button"),
-                            rx.table.column_header_cell("stop_button"),
+                            rx.table.column_header_cell("Name"),
+                            rx.table.column_header_cell("Age"),
+                            rx.table.column_header_cell("State"),
+                            rx.table.column_header_cell(""),
+                            rx.table.column_header_cell("Magic Link"),
+                            rx.table.column_header_cell("Ports"),
+                            rx.table.column_header_cell("Info"),
                             rx.table.column_header_cell(
                                 rx.button(
                                     "Refresh", on_click=CoderampTableState.load_entries
@@ -148,6 +153,6 @@ def coderamp_table() -> rx.Component:
                     ),
                     on_mount=CoderampTableState.start_autorefresh,
                 ),
-            )
-        )
+            ),
+        ),
     )

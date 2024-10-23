@@ -12,19 +12,28 @@ class InstanceTableState(rx.State):
     time: int = 0
     is_autorefreshing: bool = False
     ascii_loader: str = ""
+    show_retired: bool = False
 
     def get_ascii_loader(self, time: int):
         loader = ["𓃉𓃉𓃉", "𓃉𓃉∘", "𓃉∘°", "∘°∘", "°∘𓃉", "∘𓃉𓃉"]
         # loader = ["◰", "◳", "◲", "◱"]
         return loader[time % len(loader)]
 
+    def toggle_retired(self, value: bool):
+        self.show_retired = value
+        self.load_entries()
+
     def load_entries(self):
-        instances = (
-            Instance.select()
-            .where(Instance.state != "retired")
-            .order_by(Instance.created_at.desc())
-            .limit(10)
-        )
+        if self.show_retired:
+            instances = Instance.select().order_by(Instance.created_at.desc()).limit(10)
+        else:
+            instances = (
+                Instance.select()
+                .where(Instance.state != "retired")
+                .order_by(Instance.created_at.desc())
+                .limit(10)
+            )
+
         updated_instances = []
         for instance in instances:
             updated_instances.append(
@@ -52,7 +61,7 @@ class InstanceTableState(rx.State):
     async def delete_handler(self, id: int):
         instance = Instance.get_by_id(id)
         if instance.state == "retired":
-            await instance.delete()
+            await instance.delete_from_db()
         else:
             raise ValueError("Instance is not retired")
         self.load_entries()
@@ -192,19 +201,17 @@ def instance_table() -> rx.Component:
                             rx.table.column_header_cell(""),
                             rx.table.column_header_cell(""),
                             rx.table.column_header_cell("State"),
-                            rx.table.column_header_cell("ip"),
-                            rx.table.column_header_cell("ports"),
+                            rx.table.column_header_cell("Ipv4"),
+                            rx.table.column_header_cell("Ports"),
                             rx.table.column_header_cell(
                                 rx.button(
                                     "Refresh", on_click=InstanceTableState.load_entries
                                 )
                             ),
-                            # rx.table.column_header_cell(
-                            #     rx.button(
-                            #         "Auto-refresh",
-                            #         on_click=InstanceTableState.autorefresh_handler,
-                            #     )
-                            # ),
+                            rx.switch(
+                                "Show retired",
+                                on_change=InstanceTableState.toggle_retired,
+                            ),
                         ),
                     ),
                     rx.table.body(

@@ -42,7 +42,7 @@ def generate_slug(name: str):
 
 
 class Coderamp(Model):
-
+    # Set at object creation:
     uuid = UUIDField(unique=True, default=uuid.uuid4)
     created_at = DateTimeField(default=datetime.now)
     total_instances = IntegerField(default=0)
@@ -50,18 +50,27 @@ class Coderamp(Model):
     ready = BooleanField(default=False)
     active = BooleanField(default=False)
 
-    # User-input defined variables, they are set in configure:
-    name = TextField(null=True, default=None)
+    # Set automatically in configure:
     slug = TextField(null=True, default=None)
     magic_url = TextField(null=True, default=None)
+
+    # Set by user in configure:
+    name = TextField(null=True, default=None)
     git_url = TextField(null=True, default=None)
     setup_commands = TextField(null=True, default=None)
     ports = TextField(null=True, default=None)
-    timeout = IntegerField(default=3600)
-    vm_type = CharField(default="DEV1-S")
     open_file = TextField(null=True, default=None)
     open_folder = TextField(null=True, default=None)
-    min_instances = IntegerField(default=1)
+    timeout = IntegerField(null=True, default=None)
+    vm_type = CharField(null=True, default=None)
+    min_instances = IntegerField(null=True, default=None)
+
+    @classmethod
+    def list_all_fields(cls):
+        fields = {}
+        for field in cls._meta.fields.values():
+            fields[field.name] = type(field).__name__
+        return fields
 
     class Meta:
         database = db
@@ -70,29 +79,33 @@ class Coderamp(Model):
     def configure(
         self,
         name,
-        open_file="",
-        open_folder="/",
-        git_url="",
-        setup_commands="",
-        ports="",
-        vm_type="DEV1-S",
-        timeout=3600,
-        min_instances=1,
+        open_file,
+        open_folder,
+        git_url,
+        setup_commands,
+        ports,
+        vm_type,
+        timeout,
+        min_instances,
     ):
         self.name = name
-        self.open_file = open_file
-        self.open_folder = open_folder
+        self.open_file = open_file or "empty"
+        self.open_folder = open_folder or "Coderamp"
         self.slug = generate_slug(name)
         self.magic_url = f"https://{CODERAMP_DOMAIN}/new/?id={self.slug}"
-        self.git_url = git_url
-        self.vm_type = vm_type
-        self.timeout = timeout
-        self.setup_commands = setup_commands
-        self.ports = ports
+        self.git_url = git_url or None
+        self.vm_type = vm_type or "DEV1-S"
+        self.timeout = timeout or 3600
+        self.setup_commands = setup_commands or None
+        self.ports = ports or None
         self.ready = True
-        self.min_instances = min_instances
+        self.min_instances = min_instances or 1
         self.active = True
         self.save()
+
+    async def delete_from_db(self):
+        print(f"Deleting coderamp: {self.uuid} from database")
+        self.delete_instance()
 
     def start(self):
         print(f"Starting coderamp: {self.slug}")
@@ -245,7 +258,9 @@ class Instance(Model):
         self.state = "installing"
         self.save()
         await update_coderamp_caddyfile(
-            Instance.select().where(Instance.state != "retired")
+            Instance.select().where(
+                (Instance.state != "retired") & (Instance.public_ip != None)
+            )
         )
         self.public_url = (
             f"https://{self.uuid}.{CODERAMP_DOMAIN}/?folder={self.coderamp.open_folder}"
@@ -272,7 +287,8 @@ class Instance(Model):
         self.state = "retired"
         self.save()
 
-    async def delete(self):
+    async def delete_from_db(self):
+        print(f"Deleting instance: {self.uuid} from database")
         self.delete_instance()
 
     class Meta:

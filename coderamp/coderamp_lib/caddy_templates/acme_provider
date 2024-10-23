@@ -1,0 +1,7 @@
+{
+    acme_ca https://acme.zerossl.com/v2/DV90
+    acme_eab {
+        key_id  {key_id}
+        mac_key {mac_key}
+    }
+}

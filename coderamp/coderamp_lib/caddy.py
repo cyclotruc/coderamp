@@ -13,6 +13,15 @@ def generate_main_caddyfile():
     with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/main", "r") as file:
         caddyfile = file.read()
 
+    with open(
+        "/root/coderamp/coderamp/coderamp_lib/caddy_templates/acme_provider", "r"
+    ) as file:
+        acme_provider = file.read()
+
+    acme_provider = acme_provider.replace("{key_id}", ZERO_SSL_KEY_ID)
+    acme_provider = acme_provider.replace("{mac_key}", ZERO_SSL_MAC_KEY)
+    caddyfile = caddyfile.replace("{acme_provider}", acme_provider)
+
     caddyfile = (
         caddyfile.replace("{domain}", CODERAMP_DOMAIN)
         .replace("{key_id}", ZERO_SSL_KEY_ID)
@@ -26,7 +35,16 @@ def generate_main_caddyfile():
 
 
 def generate_coderamp_caddyfile(instances):
-    caddyfile = "{coderamps}\n{ports}"
+    caddyfile = "{acme_provider}\n{coderamps}\n{ports}"
+
+    with open(
+        "/root/coderamp/coderamp/coderamp_lib/caddy_templates/acme_provider", "r"
+    ) as file:
+        acme_provider = file.read()
+
+    acme_provider = acme_provider.replace("{key_id}", ZERO_SSL_KEY_ID)
+    acme_provider = acme_provider.replace("{mac_key}", ZERO_SSL_MAC_KEY)
+    caddyfile = caddyfile.replace("{acme_provider}", acme_provider)
     with open("/root/coderamp/coderamp/coderamp_lib/caddy_templates/coderamp") as file:
         coderamp = file.read()
 

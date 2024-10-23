@@ -55,6 +55,7 @@ async def setup_vscode(ip, open_file, open_folder):
         f"/root/.local/share/code-server/User/settings.json",
     )
     await run(ip, f"mkdir -p {open_folder}/.vscode")
+
     with open(
         "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/tasks.json"
     ) as file:
