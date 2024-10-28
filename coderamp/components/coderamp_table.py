@@ -30,6 +30,7 @@ class CoderampTableState(rx.State):
                     "vm_type": coderamp.vm_type,
                     "magic_link": coderamp.magic_url or "",
                     "ports": coderamp.ports or "",
+                    "min_instances": coderamp.min_instances or "",
                 }
             )
         self.time += 1
@@ -53,6 +54,20 @@ class CoderampTableState(rx.State):
             if not client_still_connected:
                 async with self:
                     self.is_autorefreshing = False
+
+    async def increment_min_instances_handler(self, id: int):
+        coderamp = Coderamp.get_by_id(id)
+        if coderamp:
+            coderamp.increment_min_instances()
+        else:
+            raise Exception("Coderamp not found")
+
+    async def decrement_min_instances_handler(self, id: int):
+        coderamp = Coderamp.get_by_id(id)
+        if coderamp:
+            coderamp.decrement_min_instances()
+        else:
+            raise Exception("Coderamp not found")
 
     async def stop_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
@@ -123,6 +138,28 @@ def coderamp_row(coderamp: dict) -> rx.Component:
                 color_scheme="red",
             ),
         ),
+        rx.table.cell(
+            rx.badge(coderamp["min_instances"]),
+        ),
+        rx.table.cell(
+            rx.vstack(
+                rx.button(
+                    "+",
+                    on_click=lambda: CoderampTableState.increment_min_instances_handler(
+                        coderamp["id"]
+                    ),
+                    color_scheme="green",
+                ),
+
+                rx.button(
+                    "-",
+                    on_click=lambda: CoderampTableState.decrement_min_instances_handler(
+                        coderamp["id"]
+                    ),
+                    color_scheme="red",
+                ),
+            ),
+        ),
     )
 
 
@@ -141,6 +178,8 @@ def coderamp_table() -> rx.Component:
                             rx.table.column_header_cell("Magic Link"),
                             rx.table.column_header_cell("Ports"),
                             rx.table.column_header_cell("Info"),
+                            rx.table.column_header_cell("Max Instances"),
+                            rx.table.column_header_cell(""),
                             rx.table.column_header_cell(
                                 rx.button(
                                     "Refresh", on_click=CoderampTableState.load_entries

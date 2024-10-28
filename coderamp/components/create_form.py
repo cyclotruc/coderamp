@@ -24,6 +24,8 @@ class FormState(rx.State):
             timeout=int(form_data.get("timeout", 3600)),
             vm_type=form_data.get("vm_type", "DEV1-S"),
             min_instances=int(form_data.get("min_instances", 1)),
+            extensions=form_data.get("extensions", None),
+            open_commands=form_data.get("open_commands", None),
         )
         print(f"Coderamp created and configured: {form_data}")
 
@@ -36,10 +38,16 @@ def create_form() -> rx.Component:
                 rx.vstack(
                     rx.input(placeholder="Coderamp name", name="name"),
                     rx.input(placeholder="Git URL", name="git_url"),
-                    rx.text_area(placeholder="Setup commands", name="setup_commands"),
+                    rx.text_area(
+                        placeholder="Setup commands",
+                        name="setup_commands",
+                        width="100%",
+                        height="300px",
+                    ),
                     rx.input(placeholder="Ports (comma-separated)", name="ports"),
                     rx.input(placeholder="Open file", name="open_file"),
                     rx.input(placeholder="Open folder", name="open_folder"),
+                    rx.input(placeholder="Open commands", name="open_commands"),
                     rx.input(
                         placeholder="Timeout (seconds)",
                         default_value="3600",
@@ -56,10 +64,16 @@ def create_form() -> rx.Component:
                         default_value="1",
                         name="min_instances",
                     ),
+                    rx.input(
+                        placeholder="Extensions (comma-separated)",
+                        name="extensions",
+                    ),
                     rx.button("Submit", type="submit"),
                     rx.dialog.close(rx.button("Close")),
+                    width="500px",
                 ),
                 on_submit=FormState.handle_submit,
+                width="100%",
             ),
         ),
     )

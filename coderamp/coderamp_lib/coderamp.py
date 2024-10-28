@@ -59,11 +59,13 @@ class Coderamp(Model):
     git_url = TextField(null=True, default=None)
     setup_commands = TextField(null=True, default=None)
     ports = TextField(null=True, default=None)
+    extensions = TextField(null=True, default=None)
     open_file = TextField(null=True, default=None)
     open_folder = TextField(null=True, default=None)
     timeout = IntegerField(null=True, default=None)
     vm_type = CharField(null=True, default=None)
     min_instances = IntegerField(null=True, default=None)
+    open_commands = TextField(null=True, default=None)
 
     @classmethod
     def list_all_fields(cls):
@@ -76,17 +78,25 @@ class Coderamp(Model):
         database = db
         table_name = "coderamp"
 
+    def to_json(self):
+        return {
+            field.name: getattr(self, field.name)
+            for field in self._meta.fields.values()
+        }
+
     def configure(
         self,
         name,
         open_file,
         open_folder,
         git_url,
+        extensions,
         setup_commands,
         ports,
         vm_type,
         timeout,
         min_instances,
+        open_commands,
     ):
         self.name = name
         self.open_file = open_file or "empty"
@@ -98,8 +108,10 @@ class Coderamp(Model):
         self.timeout = timeout or 3600
         self.setup_commands = setup_commands or None
         self.ports = ports or None
+        self.extensions = extensions or None
         self.ready = True
         self.min_instances = min_instances or 1
+        self.open_commands = open_commands or "zsh"
         self.active = True
         self.save()
 
@@ -115,6 +127,14 @@ class Coderamp(Model):
     def stop(self):
         print(f"Stopping coderamp: {self.slug}")
         self.active = False
+        self.save()
+
+    def increment_min_instances(self):
+        self.min_instances += 1
+        self.save()
+
+    def decrement_min_instances(self):
+        self.min_instances -= 1
         self.save()
 
     async def new_instance(self):
@@ -173,7 +193,7 @@ class Coderamp(Model):
         )
 
         instances_getting_up = len(res)
-        print(f"| Instances getting up: {instances_getting_up}")
+        # print(f"| Instances getting up: {instances_getting_up}")
 
         if instances_getting_up < self.min_instances:
             for _ in range(self.min_instances - instances_getting_up):
@@ -182,11 +202,11 @@ class Coderamp(Model):
                 await asyncio.sleep(0)
 
     async def tick(self):
-        print("______________________________")
-        print(f"|CODERAMP TICK - {self.slug}")
+        # print("______________________________")
+        # print(f"|CODERAMP TICK - {self.slug}")
         await self.prune_instances()
         await self.reach_min_instances()
-        print("|_____________________________\n")
+        # print("|_____________________________\n")
 
     class Meta:
         database = db
@@ -251,7 +271,7 @@ class Instance(Model):
                 requests.get(url)
                 ready = True
             except requests.exceptions.SSLError:
-                print(f"Waiting for {url} to be ready")
+                # print(f"Waiting for {url} to be ready")
                 await asyncio.sleep(1)
 
     async def setup(self):

@@ -24,10 +24,6 @@ class MagicState(rx.State):
 
         instance = await ramp.allocate_session(session_id)
 
-        async with self:
-            self.display_message = "Waiting for instance to be ready"
-        yield
-
         while not instance:
             async with self:
                 self.need_to_wait = True

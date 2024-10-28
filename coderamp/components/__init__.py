@@ -2,6 +2,7 @@ from .create_form import create_form
 from .coderamp_table import coderamp_table
 from .instance_table import instance_table
 from .password_login import login_form, AuthState
+from .coderamp_info import info
 
 __all__ = [
     "coderamp_table",
@@ -9,4 +10,5 @@ __all__ = [
     "instance_table",
     "login_form",
     "AuthState",
+    "info",
 ]

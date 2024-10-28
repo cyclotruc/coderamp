@@ -1,10 +1,12 @@
 import asyncio
 import reflex as rx
 from rxconfig import config
+
 from coderamp.coderamp_lib.coderamp import Coderamp, full_reset
 
 
 async def global_tick():
+    # full_reset()
     try:
         print("Global tick started")
         while True:
