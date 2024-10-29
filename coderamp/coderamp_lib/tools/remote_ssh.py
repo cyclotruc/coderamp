@@ -3,13 +3,14 @@ import asyncssh
 import sys
 
 
-async def run(ip, command):
+async def run(ip, command, verbose=False):
     async with asyncssh.connect(ip, username="root", known_hosts=None) as conn:
         process = await conn.create_process(command)
-        # async for line in process.stdout:
-        #     print(line, end="")
-        # async for line in process.stderr:
-        #     print(line, end="", file=sys.stderr)
+        if verbose:
+            async for line in process.stdout:
+                print(line, end="")
+            async for line in process.stderr:
+                print(line, end="", file=sys.stderr)
         return await process.wait()
 
 
