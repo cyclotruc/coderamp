@@ -25,7 +25,7 @@ class CoderampTableState(rx.State):
                 {
                     "id": coderamp.get_id(),
                     "name": coderamp.name,
-                    "age": coderamp.created_at + timedelta(hours=2),
+                    "age": coderamp.created_at + timedelta(hours=1),  # BUG: timezone
                     "active": coderamp.active,
                     "vm_type": coderamp.vm_type,
                     "magic_link": coderamp.magic_url or "",
@@ -150,7 +150,6 @@ def coderamp_row(coderamp: dict) -> rx.Component:
                     ),
                     color_scheme="green",
                 ),
-
                 rx.button(
                     "-",
                     on_click=lambda: CoderampTableState.decrement_min_instances_handler(

@@ -3,31 +3,36 @@ from ..coderamp_lib.coderamp import Coderamp
 
 
 class FormState(rx.State):
-    form_data: dict = {}
 
     def handle_submit(self, form_data: dict):
         self.form_data = form_data
 
-        print(form_data)
-        ramp = Coderamp.create(
-            name=form_data.get("name"),
-            url=form_data.get("git_url"),
-            commands=form_data.get("setup_commands"),
-        )
-        ramp.configure(
-            name=form_data.get("name"),
-            git_url=form_data.get("git_url", ""),
-            setup_commands=form_data.get("setup_commands", ""),
-            ports=form_data.get("ports", ""),
-            open_file=form_data.get("open_file", "empty"),
-            open_folder=form_data.get("open_folder", "Coderamp"),
-            timeout=int(form_data.get("timeout", 3600)),
-            vm_type=form_data.get("vm_type", "DEV1-S"),
-            min_instances=int(form_data.get("min_instances", 1)),
-            extensions=form_data.get("extensions", None),
-            open_commands=form_data.get("open_commands", None),
-        )
-        print(f"Coderamp created and configured: {form_data}")
+        # sanitize form_data
+        # Clean empty strings to None
+        for key, value in form_data.items():
+            if value == "":
+                form_data[key] = None
+
+        # Build kwargs with non-None values
+        kwargs = {"name": form_data["name"]}  # name is required
+
+        all_fields = Coderamp.list_all_fields()
+
+        for field in all_fields:
+            if form_data.get(field) is not None:
+                kwargs[field] = form_data[field]
+
+        # Handle numeric fields
+        if form_data.get("timeout") is not None:
+            kwargs["timeout"] = int(form_data["timeout"])
+
+        if form_data.get("min_instances") is not None:
+            kwargs["min_instances"] = int(form_data["min_instances"])
+
+        ramp = Coderamp.create(**kwargs)
+
+        ramp.set_ready()
+        print(f"Coderamp created and configured with: {kwargs}")
 
 
 def create_form() -> rx.Component:
@@ -46,7 +51,7 @@ def create_form() -> rx.Component:
                     ),
                     rx.input(placeholder="Ports (comma-separated)", name="ports"),
                     rx.input(placeholder="Open file", name="open_file"),
-                    rx.input(placeholder="Open folder", name="open_folder"),
+                    rx.input(placeholder="Open folder", name="workspace_folder"),
                     rx.input(placeholder="Open commands", name="open_commands"),
                     rx.input(
                         placeholder="Timeout (seconds)",

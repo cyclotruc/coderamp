@@ -23,49 +23,39 @@ db = PostgresqlDatabase(
 )
 
 
-def generate_slug(name: str):
-    # Convert to lowercase and replace spaces with hyphens
-    slug = name.lower().replace(" ", "-")
-    # Remove any characters that are not alphanumeric, hyphen, or underscore
-    slug = re.sub(r"[^a-z0-9-_]", "", slug)
-    # Replace multiple consecutive hyphens with a single hyphen
-    slug = re.sub(r"-+", "-", slug)
-    # Remove leading and trailing hyphens
-    slug = slug.strip("-")
-
-    suffix = 0
-    while Coderamp.select().where(Coderamp.slug == slug).first():
-        suffix += 1
-        slug = f"{slug}-{suffix}"
-
-    return slug
-
-
 class Coderamp(Model):
-    # Set at object creation:
+    # Automatically set
     uuid = UUIDField(unique=True, default=uuid.uuid4)
     created_at = DateTimeField(default=datetime.now)
     total_instances = IntegerField(default=0)
     max_instances = IntegerField(default=10)
     ready = BooleanField(default=False)
     active = BooleanField(default=False)
-
-    # Set automatically in configure:
     slug = TextField(null=True, default=None)
     magic_url = TextField(null=True, default=None)
 
-    # Set by user in configure:
-    name = TextField(null=True, default=None)
+    # User defined
+
+    # mandatory
+    name = TextField(default="_default_name")
+    vm_type = CharField(default="DEV1-S")
+    workspace_folder = TextField(default="/code/ramp")
+
+    # optional
     git_url = TextField(null=True, default=None)
     setup_commands = TextField(null=True, default=None)
     ports = TextField(null=True, default=None)
     extensions = TextField(null=True, default=None)
+    timeout = IntegerField(default=3600)
+    min_instances = IntegerField(default=1)
     open_file = TextField(null=True, default=None)
-    open_folder = TextField(null=True, default=None)
-    timeout = IntegerField(null=True, default=None)
-    vm_type = CharField(null=True, default=None)
-    min_instances = IntegerField(null=True, default=None)
     open_commands = TextField(null=True, default=None)
+
+    def set_ready(self):
+        self.ready = True
+        self.slug = Coderamp.generate_slug(str(self.name))
+        self.magic_url = f"https://{CODERAMP_DOMAIN}/new/?id={str(self.slug)}"
+        self.save()
 
     @classmethod
     def list_all_fields(cls):
@@ -76,44 +66,13 @@ class Coderamp(Model):
 
     class Meta:
         database = db
-        table_name = "coderamp"
+        table_name = "coderamps"
 
     def to_json(self):
         return {
             field.name: getattr(self, field.name)
             for field in self._meta.fields.values()
         }
-
-    def configure(
-        self,
-        name,
-        open_file,
-        open_folder,
-        git_url,
-        extensions,
-        setup_commands,
-        ports,
-        vm_type,
-        timeout,
-        min_instances,
-        open_commands,
-    ):
-        self.name = name
-        self.open_file = open_file or "empty"
-        self.open_folder = open_folder or "Coderamp"
-        self.slug = generate_slug(name)
-        self.magic_url = f"https://{CODERAMP_DOMAIN}/new/?id={self.slug}"
-        self.git_url = git_url or None
-        self.vm_type = vm_type or "DEV1-S"
-        self.timeout = timeout or 3600
-        self.setup_commands = setup_commands or None
-        self.ports = ports or None
-        self.extensions = extensions or None
-        self.ready = True
-        self.min_instances = min_instances or 1
-        self.open_commands = open_commands or "zsh"
-        self.active = True
-        self.save()
 
     async def delete_from_db(self):
         print(f"Deleting coderamp: {self.uuid} from database")
@@ -226,6 +185,24 @@ class Coderamp(Model):
         else:
             return None
 
+    @classmethod
+    def generate_slug(cls, name: str):
+        # Convert to lowercase and replace spaces with hyphens
+        slug = name.lower().replace(" ", "-")
+        # Remove any characters that are not alphanumeric, hyphen, or underscore
+        slug = re.sub(r"[^a-z0-9-_]", "", slug)
+        # Replace multiple consecutive hyphens with a single hyphen
+        slug = re.sub(r"-+", "-", slug)
+        # Remove leading and trailing hyphens
+        slug = slug.strip("-")
+
+        suffix = 0
+        while cls.select().where(cls.slug == slug).first():
+            suffix += 1
+            slug = f"{slug}-{suffix}"
+
+        return slug
+
 
 instance_states = [
     "created",
@@ -282,9 +259,7 @@ class Instance(Model):
                 (Instance.state != "retired") & (Instance.public_ip != None)
             )
         )
-        self.public_url = (
-            f"https://{self.uuid}.{CODERAMP_DOMAIN}/?folder={self.coderamp.open_folder}"
-        )
+        self.public_url = f"https://{self.uuid}.{CODERAMP_DOMAIN}/?folder={self.coderamp.workspace_folder}"
         await setup_coderamp(self)
 
         await self.wait_for_reverse_proxy(self.public_url)

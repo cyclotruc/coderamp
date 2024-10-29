@@ -39,7 +39,7 @@ class InstanceTableState(rx.State):
             updated_instances.append(
                 {
                     "name": instance.name,
-                    "age": instance.created_at + timedelta(hours=2),
+                    "age": instance.created_at + timedelta(hours=1),  # BUG: timezone
                     "link": instance.public_url or "",
                     "accessible": instance.state == "ready"
                     or instance.state == "allocated",

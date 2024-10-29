@@ -31,7 +31,7 @@ def info():
             rx.text(f"Name: {CoderampInfoState.coderamp['name']}"),
             rx.text(f"Git URL: {CoderampInfoState.coderamp['git_url']}"),
             rx.text(f"Open file: {CoderampInfoState.coderamp['open_file']}"),
-            rx.text(f"Open folder: {CoderampInfoState.coderamp['open_folder']}"),
+            rx.text(f"Open folder: {CoderampInfoState.coderamp['workspace_folder']}"),
             rx.text(f"Extensions: {CoderampInfoState.coderamp['extensions']}"),
             rx.text("Setup commands:"),
             rx.text(

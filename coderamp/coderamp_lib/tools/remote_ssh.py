@@ -22,16 +22,17 @@ async def copy_file(ip, local_path, remote_path):
         await asyncssh.scp(local_path, (conn, remote_path))
 
 
-async def wait_for_ssh(ip):
+async def wait_for_ssh(ip, timeout=600):
 
-    while True:
+    sleep_delay = 5
+    for _ in range(timeout // sleep_delay):
         try:
             async with asyncssh.connect(
                 ip, username="root", known_hosts=None, connect_timeout=5
             ):
                 return
         except Exception as e:
-            # print("Waiting for ssh...", end="")
             pass
 
-        await asyncio.sleep(2)
+        await asyncio.sleep(sleep_delay)
+    raise Exception(f"wait_for_ssh timed out after {timeout} seconds")
