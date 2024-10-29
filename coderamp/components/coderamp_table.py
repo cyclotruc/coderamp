@@ -86,8 +86,7 @@ class CoderampTableState(rx.State):
     async def delete_handler(self, id: int):
         coderamp = Coderamp.get_by_id(id)
         if coderamp:
-            print(f"Deleting coderamp: {coderamp.uuid}")
-            print(f"Coderamp dir {dir(coderamp)}")
+            print(f"Deleting coderamp from db [{coderamp.uuid}]")
             await coderamp.delete_from_db()
         else:
             raise Exception("Coderamp not found")

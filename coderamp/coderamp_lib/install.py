@@ -1,3 +1,5 @@
+import os
+
 from .tools import run, copy_file, write_to_file, wait_for_ssh
 from rxconfig import CODERAMP_DOMAIN
 
@@ -26,7 +28,7 @@ async def setup_code_server(instance, coderamp):
         "/root/coderamp/coderamp/coderamp_lib/remote_config/code-server@.service"
     ) as file:
         content = file.read()
-        content = content.replace("{domain}", CODERAMP_DOMAIN)
+        content = content.replace("{domain}", f"{instance.uuid}.{CODERAMP_DOMAIN}/")
     await write_to_file(
         instance.public_ip,
         content,
@@ -48,10 +50,11 @@ async def setup_user_demo(instance, coderamp):
         cmd = f"git clone {coderamp.git_url} {coderamp.workspace_folder}"
         await run(instance.public_ip, cmd)
     if coderamp.setup_commands:
-        await write_to_file(
-            instance.public_ip, coderamp.setup_commands, "/root/install.sh"
-        )
-        await run(instance.public_ip, "bash /root/install.sh")
+        setup_commands = coderamp.setup_commands.replace(
+            "{uuid}", str(instance.uuid)
+        ).replace("{domain}", CODERAMP_DOMAIN)
+        await write_to_file(instance.public_ip, setup_commands, "/root/install.sh")
+        await run(instance.public_ip, "bash /root/install.sh", verbose=True)
 
 
 async def setup_tasks(instance, coderamp):
@@ -63,6 +66,11 @@ async def setup_tasks(instance, coderamp):
             task_content = file.read()
 
         if coderamp.open_file:
+            path = os.path.dirname(coderamp.open_file)
+
+            await run(instance.public_ip, f"mkdir -p {path}")
+            await run(instance.public_ip, f"touch {coderamp.open_file}")
+
             with open(
                 "/root/coderamp/coderamp/coderamp_lib/remote_config/.vscode/open_file"
             ) as file:
@@ -110,7 +118,7 @@ async def setup_vscode(instance, coderamp):
 
 async def setup_coderamp(instance):
     await wait_for_ssh(instance.public_ip)
-    await setup_os(instance.public_ip)
+    await setup_os(instance)
     await setup_code_server(instance, instance.coderamp)
     await setup_user_demo(instance, instance.coderamp)
     await setup_vscode(instance, instance.coderamp)

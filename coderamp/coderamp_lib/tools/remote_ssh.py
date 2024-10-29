@@ -15,7 +15,7 @@ async def run(ip, command, verbose=False):
 
 
 async def write_to_file(ip, content, remote_path):
-    await run(ip, f"echo '{content}' > {remote_path}")
+    await run(ip, f"""echo '{content}' > {remote_path}""")
 
 
 async def copy_file(ip, local_path, remote_path):
