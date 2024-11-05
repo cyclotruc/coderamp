@@ -1,5 +1,0 @@
-{port}.{uuid}.{domain} {
-  handle_path /* {
-    reverse_proxy {ip}:{port}
-  }
-}

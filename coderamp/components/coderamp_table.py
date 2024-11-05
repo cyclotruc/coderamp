@@ -3,7 +3,10 @@ import asyncio
 import reflex as rx
 from reflex.utils.prerequisites import get_app
 from datetime import datetime, timedelta
-from ..coderamp_lib.coderamp import Coderamp
+import sys
+
+sys.path.append("/root/api/coderamp_api/")
+from coderamp_lib.coderamp import Coderamp
 
 
 class CoderampTableState(rx.State):
@@ -18,7 +21,7 @@ class CoderampTableState(rx.State):
         return loader[time % len(loader)]
 
     def load_entries(self):
-        coderamps = Coderamp.select().order_by(Coderamp.created_at.desc()).limit(10)
+        coderamps = Coderamp.select().order_by(Coderamp.created_at.desc()).limit(30)
         updated_coderamps = []
         for coderamp in coderamps:
             updated_coderamps.append(

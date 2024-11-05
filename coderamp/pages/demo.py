@@ -1,9 +1,11 @@
 import reflex as rx
+import sys
 
-from ..coderamp_lib.coderamp import Coderamp
-from rxconfig import CODERAMP_DOMAIN
+sys.path.append("/root/api/coderamp_api/")
+from coderamp_lib.coderamp import Coderamp
 
 from reflex_monaco import monaco
+
 
 class DemoState(rx.State):
     ready: bool = False
@@ -59,7 +61,7 @@ def demo() -> rx.Component:
                     rx.hstack(
                         monaco(
                             default_language="markdown",
-                            default_value='''---
+                            default_value="""---
 title: Welcome to Evidence
 ---
 
@@ -114,9 +116,9 @@ title: Welcome to Evidence
 ## Get Support
 - Message us on [Slack](https://slack.evidence.dev/)
 - Read the [Docs](https://docs.evidence.dev/)
-- Open an issue on [Github](https://github.com/evidence-dev/evidence)''',
-                            height='700px',
-                            width='600px',
+- Open an issue on [Github](https://github.com/evidence-dev/evidence)""",
+                            height="700px",
+                            width="600px",
                         ),
                         rx.card(
                             rx.data_list.root(
@@ -127,7 +129,9 @@ title: Welcome to Evidence
                                 rx.data_list.item(
                                     rx.data_list.label("Ports"),
                                     rx.data_list.value(
-                                        rx.foreach(DemoState.ports.split(","), port_badge)
+                                        rx.foreach(
+                                            DemoState.ports.split(","), port_badge
+                                        )
                                     ),
                                 ),
                                 rx.data_list.item(
@@ -148,9 +152,7 @@ title: Welcome to Evidence
                         ),
                         rx.button(
                             "Open Evidence",
-                            on_click=rx.redirect(
-                                f"https://{CODERAMP_DOMAIN}/new?id=evidence_demo"
-                            ),
+                            on_click=rx.redirect(DemoState.url),
                         ),
                     ),
                 ),

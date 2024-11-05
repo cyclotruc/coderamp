@@ -1,6 +1,8 @@
 import reflex as rx
+import sys
 
-from ..coderamp_lib.coderamp import Coderamp
+sys.path.append("/root/api/coderamp_api/")
+from coderamp_lib.coderamp import Coderamp
 
 
 class CoderampInfoState(rx.State):

@@ -1,5 +1,0 @@
-{acme_provider}
-
-{domain} {
- {web}
-}

@@ -1,7 +1,10 @@
 import asyncio
 
 import reflex as rx
-from ..coderamp_lib.coderamp import Coderamp
+import sys
+
+sys.path.append("/root/api/coderamp_api/")
+from coderamp_lib.coderamp import Coderamp
 
 
 class MagicState(rx.State):

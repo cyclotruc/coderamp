@@ -3,7 +3,10 @@ import asyncio
 import reflex as rx
 from reflex.utils.prerequisites import get_app
 from datetime import timedelta
-from ..coderamp_lib.coderamp import Instance
+import sys
+
+sys.path.append("/root/api/coderamp_api/")
+from coderamp_lib.coderamp import Instance
 
 
 class InstanceTableState(rx.State):
@@ -31,7 +34,7 @@ class InstanceTableState(rx.State):
                 Instance.select()
                 .where(Instance.state != "retired")
                 .order_by(Instance.created_at.desc())
-                .limit(10)
+                .limit(30)
             )
 
         updated_instances = []
