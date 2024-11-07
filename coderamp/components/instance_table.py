@@ -155,6 +155,12 @@ def instance_row(instance: dict) -> rx.Component:
                     ),
                 ),
                 (
+                    "failed",
+                    rx.badge(
+                        "Failed", color_scheme="red", variant="surface", radius="full"
+                    ),
+                ),
+                (
                     "ready",
                     rx.badge(
                         "Ready",
